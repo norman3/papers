@@ -2,11 +2,11 @@
 title: PAPER
 
 email: "swear013@gmail.com"
-upapers: "https://norman3.github.io"
-github_upapers: "https://github.com/norman3/papers"
-github_editupapers: "/blob/gh-pages"
+url: "https://norman3.github.io"
+github_url: "https://github.com/norman3/papers"
+github_editurl: "/blob/master"
 github_profile: "https://github.com/norman3"
-baseupapers: "/papers"
+baseurl: "/papers"
 disqus_shortname: norman3github
 
 exclude:
