@@ -1,0 +1,9 @@
+topnav:
+  - title: Home
+    url: /
+  - title: Title
+    items:
+      - title: "Decoupled Neural Interfaces using Synthetic Gradients"
+        group: "synthetic_gradients"
+        url: /docs/synthetic_gradients
+
