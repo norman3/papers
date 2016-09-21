@@ -1,0 +1,21 @@
+# Site settings
+title: PAPER
+
+email: "swear013@gmail.com"
+upapers: "http://norman3.github.io"
+github_upapers: "http://github.com/norman3/papers"
+github_editupapers: "/blob/gh-pages"
+github_profile: "http://github.com/norman3"
+baseupapers: "/papers"
+disqus_shortname: norman3github
+
+exclude:
+  - README.md
+  - _site
+  
+highlighter: rouge
+markdown: kramdown
+
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
