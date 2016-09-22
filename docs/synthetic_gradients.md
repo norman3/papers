@@ -5,6 +5,10 @@ title: "Decoupled Neural Interfaces using Synthetic Gradients"
 link_url: http://arxiv.org/abs/1608.05343
 ---
 
+- 참고 사항
+    - 논문 저작자인 Max Jadeberg 가 이미 이와 관련되어 [블로그](https://deepmind.com/blog/decoupled-neural-networks-using-synthetic-gradients/){:target="_blank"}에 따로 글을 올렸다.
+    - 아래 내용 중 일부 이미지는 이 블로그에서 발췌되었다.
+
 ### Introduction
 
 - 방향성 신경망(directed neural network)은 다음의 step을 가짐.
@@ -19,15 +23,86 @@ link_url: http://arxiv.org/abs/1608.05343
 - 위와 같은 제약으로 인해 신경망은 순차적으로 동기적 방식으로 진행된다.
 - 학습이 이러한 과정이 당연해 보이지만 각 레이어에 비동기 방식을 도입하고 싶거나 분산 환경등을 고려하게 되면 이러한 제약이 문제가 된다.
 - 이 논문의 목표는 위에서 설명한 모든 Locking 을 해결하는 것은 아니고 backprop 과정 중 발생하는 update locking을 제거하고자 하는 것.
-- 이를 위해 레이어 \\(i\\) 의 weight \\(\theta_i\\) 를 backprop을 통해 업데이트 할 때 근사값을 사용하게 된다.
-    - backprop 을 제거하는 효과를 가진다.
+- 이를 위해 레이어 \\(i\\) 의 weight \\(w\_i\\) 를 backprop을 통해 업데이트 할 때 근사값을 사용하게 된다.
 
-$$\frac{\partial E}{\partial w_i} = \frac{\partial E}{\partial a_i} \frac{\partial a_i}{\partial z_i} \frac{\partial z_i}{\partial w_i}$$
+![figure.1]({{ site.baseurl }}/images/{{ page.group }}/f01.png){:class="center-block" height="150px"}
 
-$$a_i = \sum{w_i x_i}$$
+$$\frac{\partial E}{\partial w_i} = \frac{\partial E}{\partial a_j} \frac{\partial a_j}{\partial w_i} = \frac{\partial E}{\partial z_j} \frac{\partial z_j}{\partial a_j} \frac{\partial a_j}{\partial w_i}$$
 
-$$z_i = h(a_i)$$
+$$a_j = \sum{w_i z_i}, \qquad z_j = h(a_j)$$
 
-$$\frac{\partial E}{\partial w_i} = h'(a_i)$$
 
-$$\frac{\partial E}{\partial w_i} = f_{Bprop}\left( (h_i, x_i, y_i, w_i),(h_{i+1}, x_{i+1}, y_{i+1}, w_{i+1}),...\right) \frac{\partial h_i}{\partial w_i} \simeq \hat{f}_{Bprop}(h_i)\frac{\partial h_i}{\partial w_i}$$
+$$\frac{\partial E}{\partial z_j} \equiv \delta_j, \qquad \frac{\partial z_j}{\partial a_j} = h'(a_j), \qquad \frac{\partial a_j}{\partial w_i} = z_i$$
+
+$$\frac{\partial E}{\partial w_i} = \delta_j h'(a_j) z_i$$
+
+- 위의 식들은 논문 표기법을 좀 더 이해하기 쉬운 값으로 변경해 놓은 것이다. 그림을 참고하여 살펴보도록 하자.
+- 이제 마지막 레이어로부터 backprop 계산을 위한 \\(\delta\\) 값을 살펴보도록 하자.
+- 마지막 레이어가 \\(k\\) 라고 하고 하면,
+
+$$\delta_k = y_k - t_k$$
+
+- 중간 레이어에서의 \\(\delta_j\\) 도 이를 재귀적으로 이용하여 풀이할 수 있다.
+
+$$\frac{\partial E}{\partial z_j} = \delta_j = \sum_k \frac{\partial E}{\partial z_k} \frac{\partial z_k}{\partial z_j} = \sum_k \delta_k \frac{\partial z_k}{\partial a_k} \frac{\partial a_k}{\partial z_j}=\sum_k \delta_k h'(a_k) w_{jk} = \sum_k w_{jk} \delta_k h'(a_k)$$
+
+- 이 논문은 이 수식을 다음과 같은 근사식으로 전환한다.
+
+$$\frac{\partial E}{\partial w_i} = f_{Bprop}\left(...\right) \frac{\partial z_j}{\partial w_i} \simeq \hat{f}_{Bprop}(z_j)\frac{\partial z_j}{\partial w_i}$$
+
+- 이 아이디어는 한 레이어에서 출력 값을 전달한 뒤 backprop 단계에서 전달되는 에러 값 \\(\delta\\) 를 기다리지 않고,
+- 합성 그라디언트 (synthetic graidents) 값을 이용하여 바로 현재 레이어에서의 backprop 수행한다는 것이다. (Update Locking이 사라진다)
+    - 여기서 합성(synthetic)이란 표현은 그냥 비슷하게 gradient 값을 흉내낸 가짜 값을 의미한다. (바나나맛 우유에 바나나가 안들어있는 것처럼)
+
+### Decoupled Neural Interfaces
+
+- 합성 그라디언트를 반환해주는 모듈을 아래와 같은 그림으로 표기한다.
+
+![figure.2]({{ site.baseurl }}/images/{{ page.group }}/f02.png){:class="center-block" height="200px"}
+
+- 이를 이용하여 실제 어떻게 작업이 이루어지는지 살펴보자.
+
+![figure.3]({{ site.baseurl }}/images/{{ page.group }}/f03.png){:class="center-block" height="300px"}
+
+- 그림 설명
+    - \\(f_A\\) : 이전 레이어로 논문에서는 모듈이라고 부른다.
+    - \\(h_A\\) : 모듈 A가 출력하는 출력값이다.
+    - \\(M_B\\) : synthetic gradient 를 생성해주는 모듈이다.
+    - \\(S_B\\) : 모듈 B의 일부 상태 정보를 전달한다.
+    - \\(c\\) : 연산에 필요한 부가적인 정보를 그냥 묶어서 \\(c\\) 라고 표현한다.
+    - \\(\\|\delta\_A - \hat{\delta}\_A \\|\\) : \\(\hat{\delta}\_A\\) 를 위한 Loss 함수이다.
+    - 이제 synthetic gradient 는 \\(\hat{\delta}_A = M_B(h_A, s_B, c)\\) 로 정의할 수 있다.
+
+
+- 실제 동작은 아래 그림만 보면 바로 이해된다.
+
+![figure.4]({{ site.baseurl }}/images/{{ page.group }}/f04.gif){:class="center-block" height="200px"}
+
+### 2.1 Synthetic Gradient for Feed-Forward Networks
+
+- 이제 \\(N\\) 개의 레이어를 가진 feed-forward network에서 이를 활용하는 방법을 살펴보자.
+
+![figure.5]({{ site.baseurl }}/images/{{ page.group }}/f05.png){:class="center-block" height="300px"}
+
+- 그림과 같이 여러 층의 레이어에 모두 적용 가능하다.
+- 실제 동작되는 방식은 다음과 같다.
+
+![figure.6]({{ site.baseurl }}/images/{{ page.group }}/f06.png){:class="center-block" height="300px"}
+
+- 그냥 딱 봐도 어떻게 진행되는지 쉽게 알 수 있다.
+- 일단 \\(f\_i\\) 가 출력 \\(h\_i\\) 를 \\(M\_{i+1}\\) 에 전달하면 synthetic graident \\(\hat{\delta}\_i\\) 를 바로 제공한다.
+- \\(f_i\\) 는 forward 진행과는 무관하게 바로 backprop을 수행한다. (색상이 변경되었다.)
+- 이제 \\(h\_i\\) 를 입력으로 받은 \\(f\_{i+1}\\)는 동일하게 \\(h\_{i+1}\\) 을 \\(M\_{i+1}\\) 을 전달하여 \\(\hat{\delta}\_{i+1}\\) 을 얻는다.
+- 사실 \\(\delta\_{i+1}\\) 또한 synthetic gradient 이지만 이를 이용하며 바로 \\(\delta_i\\) 를 계산한뒤 \\(M\_{i+1}\\) 을 업데이트 한다.
+- 이 과정을 계속 반복한다.
+
+
+### Synthetic Gradient for Reccurrent Networks
+
+- RNN 에도 이를 적용할 수 있다. 일단 무한히 전개되는 RNN 을 상상해보자.
+- 즉, \\(N \to \infty\\) 가 되어 \\(F\_1^{\infty}\\) 인 RNN이 된다.
+- 하지만 실제로는 계산을 하기 어려우므로 스텝 \\(t\\) 에서부터 \\(T\\) 까지의 식으로 나누어 tractable한 형태로 바꾼다.
+
+$$\theta - \alpha \sum_{\tau=t}^{\infty} \frac{\partial L_\tau}{\partial \theta} = \theta - \alpha\left( \sum_{\tau=t}^{t+T} \frac{\partial L_{\tau}}{\partial \theta} + \left( \sum_{\tau=T+1}^{\infty}\frac{\partial L_{\tau}}{\partial \theta}\right)\frac{\partial h_T}{\partial \theta}\right) = \theta -\alpha\left( \sum_{\tau=t}^{t+T} \frac{\partial L_{\tau}}{\partial \theta} + \delta_T \frac{\partial h_T}{\partial \theta}\right) $$
+
+
