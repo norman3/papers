@@ -16,9 +16,9 @@ link_url: http://arxiv.org/abs/1608.05343
     - 정의된 loss 함수로 나온 생성값을 역방향으로 전파. (backprop)
     
 - 이 과정에 여러 가지 Locking이 생겨남.
-    - (1) *Forward Locking* : 이전 노드에 입력 데이터가 들어오기 전까지는 작업을 시작할 수 없다.
-    - (2) *Update Locking* : forward 과정이 끝나기 전까지는 작업을 시작할 수 없다. (예로 backprop)
-    - (3) *Backwards Locking* : forward와 backward 과정이 끝나기 전까진 작업을 시작할 수 없다.
+    - (1) ***Forward Locking*** : 이전 노드에 입력 데이터가 들어오기 전까지는 작업을 시작할 수 없다.
+    - (2) ***Update Locking*** : forward 과정이 끝나기 전까지는 작업을 시작할 수 없다. (예로 backprop)
+    - (3) ***Backwards Locking*** : forward와 backward 과정이 끝나기 전까진 작업을 시작할 수 없다.
     
 - 위와 같은 제약으로 인해 신경망은 순차적으로 동기적 방식으로 진행된다.
 - 학습이 이러한 과정이 당연해 보이지만 각 레이어에 비동기 방식을 도입하고 싶거나 분산 환경등을 고려하게 되면 이러한 제약이 문제가 된다.
@@ -54,12 +54,13 @@ $$\frac{\partial E}{\partial w_i} = f_{Bprop}\left(...\right) \frac{\partial z_j
 - 합성 그라디언트 (synthetic graidents) 값을 이용하여 바로 현재 레이어에서의 backprop 수행한다는 것이다. (Update Locking이 사라진다)
     - 여기서 합성(synthetic)이란 표현은 그냥 비슷하게 gradient 값을 흉내낸 가짜 값을 의미한다. (바나나맛 우유에 바나나가 안들어있는 것처럼)
 
-### Decoupled Neural Interfaces
+### Decoupled Neural Interfaces (a.k.a DNI)
 
 - 합성 그라디언트를 반환해주는 모듈을 아래와 같은 그림으로 표기한다.
 
 ![figure.2]({{ site.baseurl }}/images/{{ page.group }}/f02.png){:class="center-block" height="200px"}
 
+- 이러한 모듈을 DNI (Decoupled Neural Interfaces) 라고 부른다.
 - 이를 이용하여 실제 어떻게 작업이 이루어지는지 살펴보자.
 
 ![figure.3]({{ site.baseurl }}/images/{{ page.group }}/f03.png){:class="center-block" height="300px"}
@@ -72,7 +73,6 @@ $$\frac{\partial E}{\partial w_i} = f_{Bprop}\left(...\right) \frac{\partial z_j
     - \\(c\\) : 연산에 필요한 부가적인 정보를 그냥 묶어서 \\(c\\) 라고 표현한다.
     - \\(\\|\delta\_A - \hat{\delta}\_A \\|\\) : \\(\hat{\delta}\_A\\) 를 위한 Loss 함수이다.
     - 이제 synthetic gradient 는 \\(\hat{\delta}_A = M_B(h_A, s_B, c)\\) 로 정의할 수 있다.
-
 
 - 실제 동작은 아래 그림만 보면 바로 이해된다.
 
@@ -101,8 +101,30 @@ $$\frac{\partial E}{\partial w_i} = f_{Bprop}\left(...\right) \frac{\partial z_j
 
 - RNN 에도 이를 적용할 수 있다. 일단 무한히 전개되는 RNN 을 상상해보자.
 - 즉, \\(N \to \infty\\) 가 되어 \\(F\_1^{\infty}\\) 인 RNN이 된다.
-- 하지만 실제로는 계산을 하기 어려우므로 스텝 \\(t\\) 에서부터 \\(T\\) 까지의 식으로 나누어 tractable한 형태로 바꾼다.
+- 이를 그림으로 나타내면 다음과 같다.
+
+![figure.7]({{ site.baseurl }}/images/{{ page.group }}/f07.png){:class="center-block" height="70px"}
+
+- 하지만 현실적으로는 이러한 모델을 계산하기 어렵다.
+- 따라서 보통은 다음과 같은 형태로 제한하여 실제 계산을 수행하게 된다.
+
+![figure.8]({{ site.baseurl }}/images/{{ page.group }}/f08.png){:class="center-block" height="100px"}
+
+- 이를 식으로 표현해보자.
+- \\(N \to \infty\\) 를 나타내는 식을 스텝 \\(t\\) 에서부터 \\(T\\) 까지의 식으로 나누어 tractable한 형태로 바꾼다.
 
 $$\theta - \alpha \sum_{\tau=t}^{\infty} \frac{\partial L_\tau}{\partial \theta} = \theta - \alpha\left( \sum_{\tau=t}^{t+T} \frac{\partial L_{\tau}}{\partial \theta} + \left( \sum_{\tau=T+1}^{\infty}\frac{\partial L_{\tau}}{\partial \theta}\right)\frac{\partial h_T}{\partial \theta}\right) = \theta -\alpha\left( \sum_{\tau=t}^{t+T} \frac{\partial L_{\tau}}{\partial \theta} + \delta_T \frac{\partial h_T}{\partial \theta}\right) $$
 
+- 앞서 그림을 통해 설명했듯이 보통의 경우라면 이렇게 무한히 진행되는 RNN 계산이 어렵기 때문에 임의의 \\(T\\) 값을 정한 뒤 \\(\delta\_T=0\\) 로 가정하고 식을 전개한다.
 
+- 하지만 synthetic gradient 를 이용하면 그럴 필요 없다. \\(\delta_T\\) 를 근사할 수 있게 된다.
+- 이와 관련된 내용도 다음의 그림을 보면 쉽게 이해할 수 있다.
+
+![figure.9]({{ site.baseurl }}/images/{{ page.group }}/f09.png){:class="center-block" height="300px"}
+
+- 이것도 *gif* 파일로 보면 더 이해하기 쉬울 것이다.
+
+
+![figure.10]({{ site.baseurl }}/images/{{ page.group }}/f10.gif){:class="center-block" height="100px"}
+
+### Experiments
