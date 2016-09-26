@@ -124,7 +124,41 @@ $$\theta - \alpha \sum_{\tau=t}^{\infty} \frac{\partial L_\tau}{\partial \theta}
 
 - 이것도 *gif* 파일로 보면 더 이해하기 쉬울 것이다.
 
-
 ![figure.10]({{ site.baseurl }}/images/{{ page.group }}/f10.gif){:class="center-block" height="100px"}
 
 ### Experiments
+
+- 실험 결과를 살펴보자.
+
+- 환경
+    - 데이터는 \\(MNIST\\) 와 \\(CIFAR-10\\).
+    - \\(FCN\\) 과 \\(CNN\\) 으로 각각 테스트.
+    - Hidden Layer의 수는 256 개로 고정
+    - 모든 Layer에 \\(BN\\) 과 \\(ReLU\\) 를 사용함.
+    - 모든 Layer에 \\(DNI\\) 적용.
+    - \\(cDNI\\) 는 \\(DNI\\) 에 이미지의 Label을 추가로 넣어 학습한 것을 의미.
+        - *conditional DNI* 라는 의미이다.
+
+![figure.11]({{ site.baseurl }}/images/{{ page.group }}/f11.png){:class="center-block" height="300px"}
+
+- 간단히 결과만 보면 \\(cDNI\\) 가 기존의 방식보다 정확도가 더 좋거나 비슷한 수준으로 보여짐.
+    - 가장 좋은 결과는 \\(cDNI\\) 모델에 ***linear synthetic graident*** 를 사용한 모델이다.
+    
+- - -
+
+![figure.12]({{ site.baseurl }}/images/{{ page.group }}/f12.png){:class="center-block" height="220px"}
+
+- 위 그림은 *synthetic graident* 가 실제 효과가 있는지를 확인하는 실험.
+- \\(x\\) 축은 확률 값으로 \\(p_{update}\\) 확률을 나타낸다.
+- 왼쪽 그림은 *backprop* 만 *synthetic graident* 를 적용한 것이고, 
+- 오른쪽 그림은 *forward* 도 *synthetic graident* 를 적용한 것이다.
+    - 따라서 완전히 *async* 로 동작하는 *NN* 이다.
+    - 이 때 확률 \\(p_{update}\\) 는 *forward* , *backward* 를 함께 선택하는 확률값으로 사용.
+    
+- **Complete Unlock**
+- *forward locking* 도 없애도록 하여 완전하게 *async* 로 동작할 수 있는 모드를 의미한다.
+- 이 모드는 모든 레이어에서  *synthetic gradient* 를 사용하는 것 뿐만 아니라 입력 또한 이런 방식으로 *synthetic input* 을 생성한다.
+
+![figure.13]({{ site.baseurl }}/images/{{ page.group }}/f13.png){:class="center-block" height="220px"}
+
+
