@@ -126,7 +126,10 @@ $$\theta - \alpha \sum_{\tau=t}^{\infty} \frac{\partial L_\tau}{\partial \theta}
 
 ![figure.10]({{ site.baseurl }}/images/{{ page.group }}/f10.gif){:class="center-block" height="100px"}
 
+
 ### Experiments
+
+#### Feed-Forward Network
 
 - 실험 결과를 살펴보자.
 
@@ -138,11 +141,23 @@ $$\theta - \alpha \sum_{\tau=t}^{\infty} \frac{\partial L_\tau}{\partial \theta}
     - 모든 Layer에 \\(DNI\\) 적용.
     - \\(cDNI\\) 는 \\(DNI\\) 에 이미지의 Label을 추가로 넣어 학습한 것을 의미.
         - *conditional DNI* 라는 의미이다.
-
+        - 사용된 Label 은 one-hot representation 방식이다. ( \\(MNIST\\) 와 \\(CIFAR\\) 모두 10개의 class)
+        - *CNN* 에서는 이를 바로 넣기 힘드므로 \\(C\\) (channel) 에 one-hot 방식으로 mask를 추가하였다.
+            - 결국 10개의 추가 채널이 들어감.
+    - *Optimizer* 는 \\(Adam\\) 방식을 사용함.
+    - *batch_size* 는 256을 사용
+    - *learning rate* 는 초기값으로 \\(3 \times 10^{-5}\\) 를 사용하고 \\(300K\\) 와 \\(400K\\) 에서 10배 감소
+    - 사실 이러한 하이퍼 파라미터 값은 최적화 된 상태는 아니다.
+            
 ![figure.11]({{ site.baseurl }}/images/{{ page.group }}/f11.png){:class="center-block" height="300px"}
 
 - 간단히 결과만 보면 \\(cDNI\\) 가 기존의 방식보다 정확도가 더 좋거나 비슷한 수준으로 보여짐.
     - 가장 좋은 결과는 \\(cDNI\\) 모델에 ***linear synthetic graident*** 를 사용한 모델이다.
+
+- *synthetic gradient* 도 단순한 신경망으로 구성한다. (여러 레이어로 테스트)
+    - 만약 0개의 Layer 인 경우 \\(\widehat{\delta} = M(h) = \phi\_w h + \phi\_b\\) 가 된다.
+    - 분류를 위한 *Loss* 함수는 *cross-entropy* 를 사용하였고 *synthetic gradient* 를 위한 *Loss* 함수는 \\(L_2\\) 를 사용하였다.
+    - 초기에 맨 마지막 레이어에서 내려오는 *synthetic gradient* 는 0으로 설정.
     
 - - -
 
@@ -160,5 +175,23 @@ $$\theta - \alpha \sum_{\tau=t}^{\infty} \frac{\partial L_\tau}{\partial \theta}
 - 이 모드는 모든 레이어에서  *synthetic gradient* 를 사용하는 것 뿐만 아니라 입력 또한 이런 방식으로 *synthetic input* 을 생성한다.
 
 ![figure.13]({{ site.baseurl }}/images/{{ page.group }}/f13.png){:class="center-block" height="220px"}
+
+- - -
+
+#### Recurrent Neural Net
+
+- Reccerent 모델로 모두 \\(LSTM\\) 을 사용. 여기에 *synthetic graident* 를 적용한다.
+
+![figure.14]({{ site.baseurl }}/images/{{ page.group }}/f14.png){:class="center-block" height="120px"}
+
+- 문자열 복사 문제를 처리해본다.
+    - \\(N\\) 개의 문자열을 읽어 복사를 수행하는 연산이다.
+    - Repeat 모드의 경우 숫자 \\(R\\) 을 읽어 복사를 \\(R\\) 번 반복하게 된다.
+- 위 수치값은 해당 \\(T\\) 를 사용하였을 때 실제 제대로 복원되는 Seq 의 길이를 의미함. (즉, 클수록 좋은 값이다)
+- 단, Penn Treebank 는 에러값을 의미한다. (작을수록 좋은 값이다.)
+
+- 여기서 Aux 는 다음과 같은 작업을 수행하는 보조 기능이다.
+
+![figure.15]({{ site.baseurl }}/images/{{ page.group }}/f15.png){:class="center-block" height="200px"}
 
 
