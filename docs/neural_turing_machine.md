@@ -5,7 +5,7 @@ title: "Neural Turing Machine"
 link_url: https://arxiv.org/abs/1410.5401
 ---
 
-### 튜링 머신 (Turing Machine)
+## 튜링 머신 (Turing Machine)
 
 - 튜링 머신(*Turing machine*)은 긴 테이프에 쓰여있는 여러 가지 기호들을 일정한 규칙에 따라 바꾸는 기계를 의미.
 - 엘런 튜링이 제안한 머신으로 현대 컴퓨터의 초안이 됨.
@@ -106,7 +106,7 @@ link_url: https://arxiv.org/abs/1410.5401
     - 그리고 최근에는 \\(LSTM\\) 이 좋은 성능을 내고 있음. (Hochreiter & Schmidhuber, 1997)
     - 문제는 *vainshing & exploding* 문제를 가지고 있다는 것.
         - 그래서 긴 *Sequence* 를 가지는 문제를 잘 해결하지는 못한다.
-
+    - 여기서 이러한 이야기를 하는 이유는 \\(NTM\\)이 이러한 문제를 더 잘 해결하고 있기 때문.
 
 ### NTM (a.k.a Neural Turing Machine)
 
@@ -130,7 +130,7 @@ link_url: https://arxiv.org/abs/1410.5401
 #### Memory
 
 - 메모리는 그냥 우리가 알고 있는 메모리와 개념이 같다.
-    - 가지만 좀 더 간단하게 *Matrix* 로 표현됨.
+    - 하지만 좀 더 간단하게 *Matrix* 로 표현됨.
 - 기본 구조는 다음과 같다.
 
 ![figure.5]({{ site.baseurl }}/images/{{ page.group }}/f05.png){:class="center-block" height="200px"}
@@ -155,8 +155,8 @@ $$\sum_i w_t(i) = 1,\;0 \le w_t(i) \le 1,\;\forall i\qquad{(1)}$$
 - 블록 크기가 \\(M\\) 인 메모리로부터 실제 읽은 정보를 담는 벡터를 \\({\bf r}\\) 벡터로 정의한다.
 - 이 벡터는 인덱스 \\(i\\) 위치의 메모리 블럭 \\(M_t(i)\\) 와 *convex* 결합으로 구성되는 크기 \\(M\\) 의 벡터로 정의된다.
 
-$${\bf r}_t \leftarrow \sum_{i} w_t(i)M_t(i)\qquad{(2)}$$
-
+    $${\bf r}_t \leftarrow \sum_{i} w_t(i)M_t(i)\qquad{(2)}$$
+    
 - 말로 설명하면 어려운데 그림으로 보면 좀 쉽다.
 
 ![figure.6]({{ site.baseurl }}/images/{{ page.group }}/f06.png){:class="center-block" height="300px"}
@@ -165,7 +165,7 @@ $${\bf r}_t \leftarrow \sum_{i} w_t(i)M_t(i)\qquad{(2)}$$
 
 - - -
 
-# Writing
+#### Writing
 
 - \\(LSTM\\) 으로부터 얻은 영감을 *write* 연산에 적용해본다.
     - 즉, 쓰기 작업을 *erase* 와 *add*, 두 개의 작업으로 분리하여 생각할 것이다.
@@ -192,50 +192,226 @@ $$M_t(i) \leftarrow \tilde{M}_t(i) + w_t(i){\bf a}_t\qquad{(4)}$$
 
 ### Addressing Mechanisms
 
-- 앞서 메모리에 데이터를 읽고 쓰는 과정을 살펴보았다.
-- *blurry* 라는 표현이 딱 맞는게 어떤 *weight* 벡터 \\({\bf w}\\) 를 이용하여 적당하게 퍼진 상태로 데이터를 읽고 쓰는 구조가 가능하다.
-- 사실 맨 처음에 소개한 튜링 머신 구조를 잘 보면 결국 일련의 작업 과정을 다음과 같은 형태로 반복하는 것밖에 없다.
-    - (1) 메모리로부터 데이터 읽기
-    - (2) 읽어들인 데이터를 이해한 다음 상황에 맞는 데이터를 생성하여 메모리에 쓰기
-    - (3) 지정된 다른 주소로 이동
-    
-- 앞서 메모리에 대한 읽기와 쓰기를 살펴보았기 때문에 이제 실제 주소를 이동하는 과정을 확인해봐야 한다.
-- 그리고 앞서 살펴본 메모리 읽기, 쓰기에서 힌트가 나오기는 했는데 실제 주소를 접근하는데 사용되는 요소는 바로 벡터 \\({\bf w}\\) 이다.
+- 지금까지 메모리에 데이터를 읽고 쓰는 방법을 살펴보았다. 
+- 이제부터는 어떻게 주소를 지정할 수 있는지를 살펴 볼 것이다.
+    - 주소를 지정하기 위해 필요한 것은 무엇인가?
+    - 앞서 살펴본 읽기, 쓰기 작업에서 힌트가 나오기는 했는데 실제 주소를 접근하는데 사용되는 요소는 바로 벡터 \\({\bf w}\\) 이다.
     - 즉, \\({\bf w}\\) 의 값을 변화시켜 주소를 지정하게 된다.
 - 이를 어떻게 지정할지를 알아봐야 하는데 메모리 접근 방식과 마찬가지로 아주 일반화된 형태로 \\({\bf w}\\) 값을 만들어낼 수 있는 방법을 제안한다.
     - 힌트를 주자면 이후 목적에 맞게 이러한 \\({\bf w}\\) 값을 학습하게 될 것이다.
-- 그리고 사실 이것이 바로 *controller* 의 역할이 된다.
-
-- 실제로 주소 지정을 위한 방법으로 두가지 매커니즘이 존재한다.
+- \\({\bf w}\\) 의 값을 정하는 방법에는 두 가지 관점이 포함되어 있다.
     - *content-based addressing*
     - *location-based addressing*
-- 여기서 *content-based addressing* 방식은 *Hopfield* 가 제안한 방식(1982년)으로 입력값과 이에 대해 *controller* 가 출력하는 값의 유사도를 비교하는 방식으로 구성된다.
-    - 하지만 모든 문제가 *content-based addressing* 로 풀수 있는 것은 아니다.
-    - 예를 들어 수치 연산과 관련된 문제들을 보면 두개의 변수 \\(x\\) 와 \\(y\\) 가 있다고 하고 연산 \\(f(x, y)=x \times y\\) 를 정의하자.
+
+- *content-based addressing* 
+    - 이 방식은 신경망에서 *Hopfield* 가 제안한 방식(1982년)이다.
+    - 이 방식은 매우 간단한 방식으로 동작한다.
+    - 우리가 찾고자 하는 값의 위치를 아주 간단한 방법들 통해 대락적인 근사 값으로 반환해준다.
+    - 하지만 모든 주소 지정 방식을  *content-based addressing* 로 풀 수 있는 것은 아니다.
+- *location-based addressing*
+    - 앞서 설명을 했듯 모든 주소 지정 방식을 *content-based addressing* 로만 해결할 수 있는 것은 아니다.
+    - 예를 들어 수치 연산과 관련된 문제들을 살펴보자.
+    - 두개의 변수 \\(x\\) 와 \\(y\\) 가 있다고 하고 연산 \\(f(x, y)=x \times y\\) 를 정의한다.
     - *controller* 가 이 연산을 수행하고자 하면 두 개의 변수 값을 메모리에 읽어와 결과를 반드시 어느 메모리 공간에 기록해야 한다.
-    - 이런 작업은 명확한 곱셈 연산을 수행하는 작업으로 *content* 와 관련된 연산이 아닌 *location* 에만 관련있는 연산이 된다.
-        - 이게 바로 이런 작업을 위한 주소 연산 과정을 을 *location-based addressing* 이라 한다.
-    - 사실 *content-based addressing* 는 좀 더 일반적인 연산을 내포하게 된다.
-        - 따라서 내부적으로 *location-based addressing* 이 가능하게끔 구조를 설계할 수도 있다.
-        - 아래 그림을 보도록 하자. (두 기능이 모두 포함된 구조이다.)
+        - 실수 값의 영역은 매우 크고, 실제 결과 또한 결정적인 수치 값이므로 *content-based addressing* 방식으로는 처리가 어렵다.
+    - 사실 이러한 방식은 내재된 *content* 를 사용하는 작업이 아닌 메모리 저장 위치인 *location* 에 제약을 가지는 작업이기 때문이다.
+- 결론적으로 보면 *content-based addressing* 는 *location-based addressing* 보다는 좀 더 일반화된 주소 지정 방식이라 이야기할 수 있다.
+    - 왜냐하면 *content-based addressing* 내에 *location-based addressing* 방식을 포함시킬 수 있기 때문이다. (반대는 불가능하다.)
+    - 우리는 이러한 방식을 채택하여 *location-based addressing* 도 가능한 *content-based addressing* 방식을 사용할 것이다.
 
 ![figure.9]({{ site.baseurl }}/images/{{ page.group }}/f09.png){:class="center-block" height="300px"}
 
-- 위의 그림은 \\(NTM\\) 한 step에서 다음 step으로 전환시 찾아 갈 주소 값을 만들 수 있는 일반 식을 도식화한 그림이다.
-    - 결국 이전의 메모리 \\(M\_{t-1}\\)와 \\({\bf w\_{t-1}}\\)를 이용하여 위의 일반 연산들을 수행하면 다음 주소를 얻을 수 있도록 하기 위한 \\({\bf w}\_t\\) 를 만들 수 있다는 이야기.
-    - 당연히 중간 중간에 들어간 변환 *weight* 는 데이터를 통해 학습을 하게 될 파라미터가 된다.
-        - 즉, 사용자가 별도의 controller 연산을 정의하는 것이 아니라 해당 기능을 표현하고 있는 데이터를 밀어넣어 이 *weight* 들을 학습하게 될 것이다.
+- 위의 그림은 \\(NTM\\) 한 step에서 다음 step으로 전환시 찾아 갈 주소 값을 만들 수 있는 식을 도식화한 그림이다.
+    - 결국 이전의 메모리 \\(M\_{t-1}\\)와 \\({\bf w\_{t-1}}\\)를 이용하여 위의 특정 연산들을 수행하면 다음 주소를 얻을 수 있도록 하기 위한 \\({\bf w}\_t\\) 를 만들 수 있다는 이야기.
+    - 특정 연산들이 바로 *content* 와 *location* 주소 지정 방식을 가능케 하는 열쇠.
+    - 당연히 연산 사이에 들어간 *weight* 들은 이후 입력 데이터를 통해 학습하게 될 파라미터가 된다.
     - 막연히 생각해보자면 \\(RNN\\) 과 동일한 작업을 하게 될 것인데 \\(RNN\\) 에서는 과거의 정보를 *hidden* 레이어로 넘겼다면 \\(NTM\\) 에서는 메모리에 저장을 하게 될거란 이야기.
     - 게다가 정확한 값을 기억하는 것이 아니라 신경망의 특성을 이용하여 *embedding* 된 정보로 저장을 하게 될 것이다.
-    - 각각이 무엇을 의미하는지 알아보도록 하자.
+    - 이제 주소 지정을 위한 각각의 연산들이 무엇을 의미하는지 살펴보도록 하자.
+
+- - -
+
+#### Focusing by Content
+
+- *content* 주소 지정 방식을 먼저 설명한다.
+    - 앞서 간단히 개념을 언급하긴 했지만 *centent* 주소 지정 방식이란 어떤 입력 값을 넣어 그 값을 저장하고 있는 주소 값을 반환하는 작업을 의미한다.
+    - 물론 이를 통해 얻어지는 주소 값을 이용해 실제로 값을 메모리에서 읽어오면 이 값은 원래 입력 값과 정확히 일치하는 값이 아니라 근사값을 얻게 된다.
+        - 이게 바로 *content-based addressing* 를 의미하는 것이다.
+    - 신경망에서 *auto-encoder* 같은 걸 떠올리면 좀 더 쉽게 이해가 될 것이다.
+    - 이를 어떻게 구현할 수 있는지 식을 살펴보자.
+
+$$w_t^c(i) \leftarrow \frac{\exp\left( \beta_{t} K\left[ {\bf k}_t, M_t(i) \right] \right)}{ \sum_j \exp\left( \beta_{t} K\left[ {\bf k}_t, M_t(j) \right] \right)}\qquad{(5)}$$
+
+$$K[{\bf u}, {\bf v}] = \frac{ {\bf u} \cdot {\bf v} }{ \|{\bf u}\| \cdot \|{\bf v}\| }\qquad{(6)}$$
+
+- 식만 봐도 그냥 *softmax* 임을 알 수 있다.
+- 먼저 길이가 \\(M\\) 인 키(*key*) 벡터 \\(k\_t\\) 가 주어지면 이를 유사도 측정 함수인 \\(K\\) 함수에 대입하여 \\(w\_t^c\\) 를 구하게 된다.
+- 유사도 함수 \\(K\\) 는 그냥 코사인(*cosine*) 유사도 함수이다.
+- 결국 의미하는 바는 키(*key*) 벡터 \\(k\_t\\) 를 메모리와 비교하여 코사인 유사도가 높은 위치에 높은 확률 값을 부여하는 형태.
+- 이 때 추가적으로 \\(\beta_t\\) 를 사용하는데 이 값을 적절히 조절하면 확률 강도(퍼짐 정도)를 조절할 수 있다.
+
+![figure.10]({{ site.baseurl }}/images/{{ page.group }}/f10.png){:class="center-block" height="220px"}
+
+- - -
+
+#### Focusing by Location
+
+- 앞서 이야기한대로 어떤 작업의 경우 단순히 *location* 방식의 주소 지정 방식으로 처리를 해야할 경우가 있다.
+- 그리고 메모리 위치에 접근하는 작업은 반복적으로 접근하는 방법과 랜덤한 접근 둘 다 가능하도록 구현되어야 한다.
+- 일단은 현재 접근하는 메모리 위치에서 1만큼 오른쪽으로 (혹은 왼쪽으로) 이동한다던가 하는 작업을 할 수 있어야 한다.
+- 하지만 이미 우리는 앞 단계에서 *content* 정보로 주소 지정을 하는 기능을 사용하고 있다.
+    - 따라서 *location* 을 위한 주소 지정 방식을 사용하기 위해서는 *content* 와 *location* 을 선택할 수 있는 방법이 필요하다.
+- 다음과 같은 과정을 추가하여 두 과정을 적절히 선택할 있도록 한다.
+
+$${\bf w}_t^g \leftarrow g_t{\bf w}_t^{c} + (1-g_t){\bf w}_{t-1}\qquad{(7)}$$
+
+- 여기서 \\(g\_t\\) 는 게이트를 의미한다. 게이트는 \\(0\\) ~ \\(1\\) 사이의 실수 값을 가진다.
+    - \\({\bf w}\_t^c\\) 는 이전 *content* 연산을 통해 얻어진 주소 값이다.
+    - \\({\bf w}\_{t-1}\\) 는 이전 *step* 의 \\({\bf w}\\) 값을 의미한다.
+
+- 만약 게이트 \\(g\_t=0\\) 인 경우에는 앞서 사용한 *content* 정보를 전혀 사용할 수 없게 된다.
+    - 따라서 \\(g\_t=0\\) 인 경우 이전 step 에 사용되었던 주소 값이 그대로 전달되게 된다.
+- 반대로 게이트 \\(g\_t=1\\) 인 경우에는 *content* 를 위한 주소 정보만 사용되고 이전에 담겨 있던 값은 의미가 없어진다.
+- 이 과정을 *interpolation* 이라 한다.
+    - \\(\\{0,1\\}\\) 값 중에 하나를 선택하는 것이 아니라 실수 값을 선택한다.
+    - 그런 이유로 *interpolation* 이라는 용어가 사용된다. 따라서 이 둘의 결과를 섞을 수도 있다.
+    - \\(LSTM\\) 에서 사용되던 게이트들을 생각해보자.
+
+- - -
+
+- 이제 *shift weighting* 을 살펴보도록 하자.
+- 이 작업은 주소 값을 좌 혹은 우로 이동을 할 수 있는 연산이다.
+- 이를 위한 변수로 \\({\bf s}\_t\\) 를 제공한다.
+    - \\({\bf s}\_t\\) 는 시작과 끝 값을 가지는 벡터로 구성되며 현재 위치에 대한 상대 인덱스가 저장된다.
+    - 그리고 그 크기는 그 사이의 정수 개수만큼 된다.
+    - 예를 들어 시작 값이 \\(-1\\) 이고 끝 값이 \\(1\\) 인 경우 \\(\\{-1, 0, 1\\}\\) 인 요소들을 가지게 된다.
+- 실제 값을 만들어내는 가장 쉬운 방법은 *softmax* 를 사용하는 것이다.
+    - 사실 다른 방법도 실험을 해보긴 했다. 예를 들어 특정 실수 값을 출력하여 이를 이용하여 \\(s\_t\\) 값을 만들어봤다.
+        - 예를 들어 *controller* 가 예측한 이동 값이 \\(6.7\\) 이라면 \\(s\_t(6) = 0.3\\) , \\(s\_t(7)=0.7\\) 로 하고 나머지 값은 모두 0으로 등.
+        
+$$\tilde{w}_t(i) \leftarrow \sum_{j=0}^{N-1}w_t^g(j)s_t(i-j) \qquad{(8)}$$
+
+- 그림을 보면 쉽게 이해할 수 있다.
+
+![figure.11]({{ site.baseurl }}/images/{{ page.group }}/f11.png){:class="center-block" height="350px"}
+
+- - -
+
+- 식(8) 을 통하게 되면 약간 문제가 있는데 확률적인 비율로 값이 분배되는 효과가 있기 때문에 특정 주소를 딱 집어야 하는 경우에는 좀 맞지 않을 수 있다.
+- 이를 보정하기 위해 *sharping* 과정을 추가한다.
+    - 확률이 더 높은 위치의 값을 boosting하는 효과를 가진다.
+    - 물론 값을 어떻게 조정하느냐에 따라 값을 더 뭉갤수도 있다.
+
+$$w_t(i) \leftarrow \frac{\tilde{w}_t(i)^{\gamma_t}}{\sum_j \tilde{w}_t(j)^{\gamma_t}}\qquad{(9)}$$
+
+![figure.12]({{ site.baseurl }}/images/{{ page.group }}/f12.png){:class="center-block" height="130px"}
+
+#### Controller Network
+
+- 지금까지 여러 파라미터 값들을 제어하여 \\(NTM\\) 을 동작하는 것을 확인했다.
+- 위의 작업들을 조합하면 메모리 읽기, 쓰기, 주소 지정 동작을 수행할 수 있다.
+- \\(LSTM\\) 의 경우 모델 내에 메모리를 유지하면서 동작을 하게 되는데 동일하지만 \\(NTM\\)을 이용하면 외부에 메모리를 두는 형태로 구현이 가능하다.
+- 실험을 통해 \\(RNN\\) 으로 작업했던 일들을 \\(NTM\\) 으로 동작해보고 더 좋은 성능을 얻을 수 있음을 확인해보도록 하겠다.
+
+### Experiment
+
+- 여기서는 아주 기본적인 작업에 대한 실험만을 진행해 볼 것이다.
+    - 데이터를 복사하는 작업
+    - 데이터를 정렬하는 작업
+- 모든 실험에는 다음 세 가지 모델을 사용한다.
+    - *feedforward* 방식을 사용하는 \\(NTM\\) *controller*
+    - \\(LSTM\\) 을 사용하는 \\(NTM\\) *controller*
+    - 그냥 \\(LSTM\\)
+
+- - - -
+
+#### Copy
+
+- 여기서는 아주 긴 시퀀스를 가지는 데이터 구조를 복사하는 실험을 할 것이다.
+- 사실 이런 문제는 \\(RNN\\) 에서 많이 다루어졌다.
+- 실험 환경
+    - 입력값은 랜덤한 이진 벡터의 시퀀스이다. (8bit)
+    - 길이는 랜덤하게 \\(1\\) ~ \\(20\\) 사이의 값을 가진다.
+    - 시퀀스의 마지막 입력은 구분자(delimiter)를 사용.
     
+![figure.13]({{ site.baseurl }}/images/{{ page.group }}/f13.png){:class="center-block" height="250px"}
+
+- 위의 그림은 \\(NTM\\) 이 \\(LSTM\\) 을 단독으로 사용하는 것보다 훨씬 빠르다는 것을 보여주는 지표이다.
+- 시퀀스 길이를 늘려가면서 단위 시퀀스당 비용을 보여준다. (근데 cost의 의미를 모르겠다. 시간인가?)
+- 게다가 더 긴 시퀀스에 대해서도 \\(NTM\\) 이 더 잘 학습한다는 것을 알 수 있었다.
+- \\(NTM\\) 은 \\(LSTM\\) 과 다르게 완전하게 복사하는 알고리즘을 학습하고 있다는 사실을 알 수 있다.
+    - 이를 확인하기 위해서 우리는 학습된 상태에서 *controller* 와 *memory* 사이의 작업 과정을 분석하였다.
+    - 대충 아래와 같은 방식으로 돌아가게 된다.
     
+```
+초기화 : 헤드를 시작 위치로 옮긴다.
 
+while 구분자(delimeter)가 아닐때 까지 반복 do
+  입력 벡터를 받음
+  입력 벡터를 헤더 위치에 기록
+  헤더의 위치를 1만큼 증가
+end while
+
+헤더 위치를 다시 맨 처음 시작 위치로 이동
+
+while true do
+  헤더 위치로부터 출력할 벡터를 읽음
+  읽은 백터를 외부로 방출(emit)
+  헤더의 위치를 1만ㅊ큼 증가
+end while
+```
+
+- 실험 결과를 살펴보자.
+
+![figure.14]({{ site.baseurl }}/images/{{ page.group }}/f14.png){:class="center-block" height="250px"}
+
+
+- 먼저 상단의 4개의 상자는 입력 길이가 각각 10, 20, 30, 50 인 시퀀스를 넣는 것을 의미한다. 바로 아래는 120 길이의 입력을 의미한다.
+- 색상은 출력 값을 나타낸다. (1이면 붉은색, 0이면 파란색이고 그 사이의 값은 색상 스펙트럼으로 표현한다.)
+- 길이가 20일 때까지는 100% 정확하게 동작한다. 50일 때까지도 꽤나 정확하게 동작한다는 것을 알 수 있다.
+
+- 참고로 \\(LSTM\\) 의 결과는 어떤지 확인해보자.
+
+![figure.15]({{ site.baseurl }}/images/{{ page.group }}/f15.png){:class="center-block" height="250px"}
+
+- \\(NTM\\) 이 복사 작업을 진행할 때의 *add* 메모리 값과 위치를 위한 \\(w\_t\\) 벡터 값을 보도록 하자.
+    - \\(w\_t\\) 의 경우 \\(1\\) 이 하얀색, \\(0\\)이 검은색으로 중간은 회색의 스케일을 가지게 된다.
+
+![figure.16]({{ site.baseurl }}/images/{{ page.group }}/f16.png){:class="center-block" height="400px"}
+
+- - -
+
+#### Repeat Copy
+
+- 반복 복사는 그냥 복사 기능을 확장한 것이다.
+- 추가적인 기능으로 입력이 종료되는 시점부터 실제 복사가 발생되도록 구현한다. 그것도 원하는 만큼 \\(n\\) 회 반복 할 수 있다.
+- 이를 통해 \\(NTM\\) 이 *for loop* 기능을 수행할 수 있는지를 알수 있다.
+- 입력은 임의의 크기의 이진 시퀀스 데이터를 입력한 뒤 반복할 숫자를 입력한다.
+    - 이 때 입력할 숫자값은 이진 시퀀스 데이터와 같은 채널을 사용하지 않고 다른 채널을 사용하게 된다.
     
+- 복사(Copy)와 마찬가지로 성능을 좀 보자.
+
+![figure.17]({{ site.baseurl }}/images/{{ page.group }}/f17.png){:class="center-block" height="400px"}
+
+- 실제 결과도 눈으로 보는게 가장 빠르다.
+
+![figure.18]({{ site.baseurl }}/images/{{ page.group }}/f18.png){:class="center-block" height="600px"}
+
+![figure.19]({{ site.baseurl }}/images/{{ page.group }}/f19.png){:class="center-block" height="300px"}
+
+- - - -
+
+#### Associative Recall
+
+- 앞에서 살펴본 알고리즘은 무척이나 간단한 알고리즘이다.
+- 이제 좀 더 복잡한 문제들을 다루어보도록 하자.
+
+(작성중)
 
 
-### 참고자료
 
-- [http://www.slideshare.net/yuzurukato/neural-turing-machines-43179669](http://www.slideshare.net/yuzurukato/neural-turing-machines-43179669)
-- [http://www.slideshare.net/ckmarkohchang/neural-turing-machine-tutorial-51270912](http://www.slideshare.net/ckmarkohchang/neural-turing-machine-tutorial-51270912)
+## 참고자료
+
+- [http://www.slideshare.net/yuzurukato/neural-turing-machines-43179669](http://www.slideshare.net/yuzurukato/neural-turing-machines-43179669){:target="_blank"}
+- [http://www.slideshare.net/ckmarkohchang/neural-turing-machine-tutorial-51270912](http://www.slideshare.net/ckmarkohchang/neural-turing-machine-tutorial-51270912){:target="_blank"}
 
