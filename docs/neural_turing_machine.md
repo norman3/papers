@@ -397,9 +397,9 @@ end while
 
 ![figure.18]({{ site.baseurl }}/images/{{ page.group }}/f18.png){:class="center-block" height="600px"}
 
-![figure.19]({{ site.baseurl }}/images/{{ page.group }}/f19.png){:class="center-block" height="300px"}
+![figure.19]({{ site.baseurl }}/images/{{ page.group }}/f19.png){:class="center-block" height="400px"}
 
-- - - -
+- - -
 
 #### Associative Recall
 
@@ -418,8 +418,53 @@ end while
 - 그리고 최종 출력된 결과를 보면 정확히 원하고자 하는 위치 이후의 3 bit 가 출력됨을 확인할 수 있다.
 
 
+- - -
 
+#### Dynamic N-Grams
 
+- *n-gram* 문제는 \\(NTM\\) 이 예측 분포 문제를 얼마나 빨리 적응하는지를 확인하는 예제이다.
+- 말은 화려한데 그냥 어떤 분포를 통해 생성된 데이터들의 패턴을 파악하여 다음 값을 에측하는 문제이다.
+- 굳이 *n-gram* 이란 용어를 쓴 이유는 이를 활용하면 전이 확률 정보를 메모리에 저장 하는 형태로 익히 알려진 N-gram 모델을 구현해 낼 수 있기 때문이다.
+- 여기서는 이진 6-Gram 을 사용한다. 이 말은 앞의 5-bit 를 확인한 뒤 현재 bit 를 예측한다는 의미이다.
+    - 이 때의 확률 값을 다음과 같이 정의한다.
+    
+$$P(B=1\|N_1, N_0, c) = \frac{N_1+\frac{1}{2}}{N_1+N_0+1}\qquad{(10)}$$
+
+- 여기서 \\(c\\) 는 윈도우 크기로 현재 \\(6\\) 으로 설정되어 있다. (앞서 5개의 bit를 살펴봄)
+- \\(N\_0\\) 는 \\(c\\) 이내의 bit 중 \\(0\\) bit 인 경우를 의미하고, \\(N_1\\) 은 \\(1\\) bit 를 의미한다.
+
+![figure.21]({{ site.baseurl }}/images/{{ page.group }}/f21.png){:class="center-block" height="120px"}
+
+- - -
+
+#### Priority Sort
+
+- 마지막으로 정렬 알고리즘을 살펴본다.
+- 랜덤하게 이진 데이터 벡터를 입력받아 이를 정렬한다. 이 때의 우선 순위는 균등하게 생성된다.
+- 20개의 이진 데이터를 입력받은 뒤 (이 때 priority 도 함께 받는다.) 이 중 priority가 높은 순으로 16개의 이진 벡터를 출력한다.
+    - 크기를 16으로 제한한 이유는 \\(NTM\\) 이 깊이(depth) `4의 이진 힙소트 문제 처리가 가능한지를 확인하기 위해 사용되었기 때문이다.
+    
+![figure.22]({{ site.baseurl }}/images/{{ page.group }}/f22.png){:class="center-block" height="200px"}
+
+![figure.23]({{ site.baseurl }}/images/{{ page.group }}/f23.png){:class="center-block" height="200px"}
+
+- 뭐 결과는 이렇다는데 자세한 내용이 없어서 생략하도록 하자.
+
+- - -
+
+#### Experimental Settings
+
+- \\(NTM\\) with Feeadforward
+
+![figure.24]({{ site.baseurl }}/images/{{ page.group }}/f24.png){:class="center-block" height="200px"}
+
+- \\(NTM\\) with \\(LSTM\\)
+
+![figure.25]({{ site.baseurl }}/images/{{ page.group }}/f25.png){:class="center-block" height="200px"}
+
+- \\(LSTM\\)
+
+![figure.26]({{ site.baseurl }}/images/{{ page.group }}/f26.png){:class="center-block" height="200px"}
 
 ## 참고자료
 
