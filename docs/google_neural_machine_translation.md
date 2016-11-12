@@ -97,5 +97,81 @@ $${\bf a}_t = \sum_{t=1}^{M} p_t \cdot {\bf x}_t \qquad{(4)}$$
 ### Residual Connections
 
 - 정확도를 올리고자 residual 노드를 넣는다. (*LSTM* stack에다가)
+- residual 을 넣지 않고 일반적인 *stacked LSTM* 을 쌓아 사용하면 학습 속도가 너무 느리게 된다.
+    - 게다가 잘 알고 있는대로 *exploding* 과 *vanishing gradient* 문제가 발생한다.
+- 경험상 번역 모델에 기본적인 *LSTM* 모델을 사용하면 4개 층까지는 잘 동작하지만 6개부터는 문제가 발생하고 8개는 제대로 동작하지 못한다.
 
+![figure.3]({{ site.baseurl }}/images/{{ page.group }}/f03.png){:class="center-block" height="260px"}
+
+
+- 일반적인 *LSTM* 모델의 수식은 다음과 같다.
+
+$${\bf c}_{t}^{i}, {\bf m}_{t}^{i} = LSTM_i({\bf c}_{t-1}^{i}, {\bf m}_{t-1}^{i}, {\bf x}_{t}^{i-1};{\bf W}^{i}) \qquad{(5)}$$
+
+$${\bf x}_{t}^{i} = {\bf m}_{t}^{i} \qquad{(5)}$$
+
+$${\bf c}_{t}^{i+1}, {\bf m}_{t}^{i+1} = LSTM_{i+1}({\bf c}_{t-1}^{i+1}, {\bf m}_{t-1}^{i+1}, {\bf x}_{t}^{i};{\bf W}^{i+1}) \quad{(5)}$$
+
+- 이 때 \\({\bf x}\_{t}^{i}\\) 는 \\(LSTM\\) 의 스텝 \\(t\\) 일 때의 입력 값으로 사용된다.
+- \\({\bf m}\_{t}^{i}\\) 와 \\({\bf c}\_{t}^{i}\\) 는 각각 \\(LSTM\\) 의 Hidden 상태와 메모리 값을 의미한다.
+- 여기에 redidual 을 추가한 모델은 다음과 같다.
+
+$${\bf c}_{t}^{i}, {\bf m}_{t}^{i} = LSTM_i({\bf c}_{t-1}^{i}, {\bf m}_{t-1}^{i}, {\bf x}_{t}^{i-1};{\bf W}^{i}) \qquad{(5)}$$
+
+$${\bf x}_{t}^{i} = {\bf m}_{t}^{i} + {\bf x}_{t}^{i-1} \qquad{(5)}$$
+
+$${\bf c}_{t}^{i+1}, {\bf m}_{t}^{i+1} = LSTM_{i+1}({\bf c}_{t-1}^{i+1}, {\bf m}_{t-1}^{i+1}, {\bf x}_{t}^{i};{\bf W}^{i+1}) \quad{(5)}$$
+
+- 아주 간단한 변경만으로도 엄청난 효과를 낸다. 
+- 실험 결과 8 레이어의 \\(LSTM\\) 이 가장 효과가 좋았다. (*encoder*, *decoder* 각각)
+
+### Bi-directional Encoder for First Layer
+
+- 번역 시스템에서는 번역을 제대로 하기 위해 입력 쪽 데이터를 양 방향에서 살펴보아야 할 필요가 있다.
+    - 보통 입력 쪽 언어의 정보는 왼쪽에서 오른쪽으로 이동되는 것이 보통인데 이게 출력 쪽 언어에서는 서로 분할되어 다른 위치에 등장해야 하는 경우도 많다.
+    - 컨텍스트를 충분히 살펴보기 위해 *encoder* 단계에서는 *bi-directional* *RNN* 을 사용하게 된다.
+    - 아래 그림을 참고하도록 하자.
+    
+![figure.4]({{ site.baseurl }}/images/{{ page.group }}/f04.png){:class="center-block" height="350px"} 
+
+### Model Parallelism
+
+- 모델이 복잡하기 때문에 병렬 모델을 사용할 수 밖에 없다.
+    - 모델 병렬화(model parallelism)와 데이터 병렬화(data parallelism)를 모두 사용한다.
+- 데이터 병렬화를 위해 사용한 방식은 Downpour SGD 이다. 
+    - \\(n\\) 개로 복사된 장비가 동일한 모델 파라미터를 공유한다.
+    - 그리고 각각 독립적으로 파라미터를 업데이트한다. (asynchronously update)
+- 실험에서는 약 10개의 장비( \\(n=10\\) )로 실험하였다.
+    - 모든 장비는 \\(m\\) 개의 문장을 *mini-batch* 로 사용한다.
+    - 실험에서는 주로 \\(m=128\\) 을 사용하였다.
+- 추가로 모델 병렬화 (model parallelism)을 사용해서 성능을 더 올린다.
+    - 다중 GPU 환경으로 모델을 구성한다. (장비당 8개의 GPU를 사용한다.)
+    - 각 레이어 층마다 서로 다른 GPU를 할당하여 처리하게 된다.
+    - 이렇게 하면 \\(i\\) 번째 레이어의 작업이 모두 종료되기 전에 \\(i+1\\) 번째 작업을 진행할 수 있다.
+- softmax 레이어도 분할하여 사용한다.
+
+- 현재 bi-directional LSTM 은 첫번재 레이어에만 적용한다.
+    - 병렬화를 위해 최대한 효율적으로 구성하기 위해서이다.
+
+## Segmentation Approaches
+
+- NMT 방식은 고정된 단어 사전 집합을 사용하게 된다.
+- 하지만 이런 방식은 단어 사전에 포함되지 않은 단어가 등장했을 때 처리가 애매하다는 문제가 있다. (OOV : Ouf of Vocabulary)
+- 이를 해결하기 위한 가장 쉬운 방식은 *copy* 모델이다.
+    - 해석이 되지 않는 단어는 그냥 입력으로부터 출력으로 전달해버리는 방식.
+- 우리는 이를 좀 더 개선하기 위해 *sub-word unit* 을 만드는 방식을 추가한다.
+- 이는 *work/character* 방식을 혼합한 방식이라 생각하면 된다.
+
+### Wordpiece Model
+
+- OOV 문제를 해결하기 위해 *sub-word unit* 방식의 WPM (wordpiece model)을 개발함.
+- 이는 일본어, 한국어 (응?) 세그멘테이션(segmentation) 문제를 해결하기 위해 개발한 방법을 응용한 것이다.
+- 문자 단위의 시퀀스에서 분할 가능한 단어 별로 나누어내는 과정이 들어간다. (우리는 한국 사람이니까 형태소 분석을 생각하자.)
+- 아래 예제를 보면 대충 어떤 것인지 짐작이 갈 것이다.
+    - **Word:** Jet makers feud over seat width with big orders at stake
+    - **wordpieces:** _J et _makers _fe ud _over _seat _width _with _big _orders _at _stake
+    
+- 보면 알겠지만 "Jet" 이라는 단어는 "_J" 과 "et" 로 나누어지게 된다.
+- 마찬가지로 "feud" 는 "_fe" 와 "ud" 로 나누어진다.
+- "_" 는 시작 문자라는 의미로 붙인다.
 
