@@ -17,7 +17,6 @@ link_url: https://arxiv.org/abs/1609.08144
     - 8개의 LSTM *encoder* 와 8 개의 LSTM *docoder* (게다가 **Attention** 모델)
     - 학습시 속도를 올리기 위해 low-precision 연산 처리.
     - 드문드문 발생하는 단어들도 잘 좀 처리해보자는 의미에서 *wordpiece* 를 사용.
-        - 이런 방식은 *word* 단위 모델과 *character* 단위 모델의 중간 쯤으로 생각해도 된다.
     - 빠른 검색을 위한 beam-search 는 local-normalization 기법을 사용함.
     
 ## Introduction
@@ -174,4 +173,104 @@ $${\bf c}_{t}^{i+1}, {\bf m}_{t}^{i+1} = LSTM_{i+1}({\bf c}_{t-1}^{i+1}, {\bf m}
 - 보면 알겠지만 "Jet" 이라는 단어는 "_J" 과 "et" 로 나누어지게 된다.
 - 마찬가지로 "feud" 는 "_fe" 와 "ud" 로 나누어진다.
 - "_" 는 시작 문자라는 의미로 붙인다.
+- 이 방식은 *language-model* likelihood 값을 최대화하는 방식으로 학습을 하여 구성한다.
+    - [이 문서](http://www.australianscience.com.au/research/google/37842.pdf) 를 참고하라고 한다.
+    - 위 논문과 다르게 구현된 내용은 시작 심볼(start symbol)은 사용하였지만 종료 심볼(end symbol)은 사용치 않는다고.
+- 지나치게 세세하게 나누면 사전에 포함되어야 할 단어 수가 너무 많아지므로 적당한 수준으로 나눈다.
+    - 실험에서는 wordpiece 조각을 약 8k ~ 32k 에서 좋은 결과를 얻었다. (BLUE 기준)
+- 이러한 방식으로도 얻을 수 없었던 단어(rare word)들은 앞서 언급한대로 *copy model* 을 사용하였다.
+
+
+### Mixed Word/Character Model
+
+- 두번째 접근 방식으로 혼합된 단어/문자 모델 (mixed word-characer model)을 사용한다.
+- 단어 모델에서는 고정된 단어 사전을 사용한다.
+    - 하지만 이것만 사용하면 OOV 문제가 발생함을 앞서 설명했다.
+- 보통 OOV 단어로 판명되면 `<UNK>` 태그를 붙이게 되는데 여기서는 이것 대신 문자 단위로 나우어 처리한다.
+    - 단어를 문자 단위로 나누되 태그를 붙인다.
+    - 시작 문자인 경우 `<B>`, 중간 문자인 경우 `<M>`, 끝 단어인 경우 `<E>` 를 붙인다.
+    - 예를 들어 `Mike` 라는 단어는 `<B>M <M>i <M>k <E>i` 로 나누어진다.
+- 전체 작업 과정에서는 이 prefix 를 유지한채로 학습하고 후처리 단계에서 이 태그가 남아있는 경우 해당 태그들을 다시 삭제한다.
+
+## Traning Criteria
+
+- 주어진 \\(N\\) 개의 입력 출력 쌍 문장을 \\(\mathcal{D} \equiv \\{ {\bf X}^{(i)}, {\bf Y}^{*(i)}\\}_{i=1}^{N}\\) 라고 하자.
+- 기본적인 *maximum-likelihood* 학습 방식은 로그 확률 값을 최대화하는 목적 함수를 사용하는 것이다.
+
+$$\mathcal{O}_{ML}({\bf \theta}) = \sum_{i=1}^{N}\log P_{\theta}({\bf Y}^{*(i)}|{\bf X}^{(i)}) \qquad{(7)}$$
+
+- 이 함수의 가장 큰 문제는 *BLUE* 평가 지표가 목적 함수와 바로 부합되지 않는다는 사실.
+- (참고) *BLUE* 평가란?
+
+$$BP=\left\{\begin{array}{11}1 & if\; c \gt r\\e^{1-r/c} & if\; c \le r\end{array}\right.$$
+
+$$p_n = \frac{\sum_{C \in Candieates}\sum_{ngram \in C} Count_{clip}(ngram)}{\sum_{C \in Candieates}\sum_{ngram' \in C'} Count_{clip}(ngram')}$$
+
+$$ BLEU = BP\cdot\exp\left( \sum_{n=1}^{N} w_n\log p_n \right) $$
+
+- 이를 위해 조금 다른 목적 함수를 도입한다.
+- 강화학습에서 사용되던 Reward 개념을 도입하여 보상 기대값을 목적 함수로 사용하게 된다.
+
+$$\mathcal{O}_{RL}({\bf \theta}) = \sum_{i=1}^{N}\sum_{Y \in \mathcal{Y}} P_{\theta}({\bf Y}|{\bf X}^{(i)}) r({\bf Y}, {\bf Y}^{*(i)}) \qquad{(8)}$$
+
+- 여기서 \\(r({\bf Y}, {\bf Y}^{*(i)})\\) 은 문장 단위 점수를 나타낸다. 
+    - 즉, 출력한 문서와 실제 문서와의 차이를 점수로 환산하게 된다는 것이다.
+- 이 때 사용하는 점수 지표는 BLEU 가 아니고 GLEU 이다.
+- GLEU 는 우리가 만든 지표인데 대충 다음과 같다.
+    - 출력 문자열과 정답 문자열을 일단 1 ~ 4 까지의 토큰 문자열로 만든다.
+    - 출력 문자열을 기준으로 recall과 precision 을 구한다.
+    - 이 중 가장 작은 값을 GLEU 값으로 정한다.
+    - 실제 값은 0 ~ 1 사이의 값을 가지게 된다.
+    
+- 최종 평가 함수는 ML 방식과 RL 방식을 합쳐 목적 함수로 사용한다.
+
+$$\mathcal{O}_{mixed}(\theta) = \alpha \times \mathcal{O}_{ML}(\theta) + \mathcal{O}_{RL}(\theta) \qquad{(9)}$$
+
+- 우리가 사용한 \\(\alpha\\) 값은 \\(0.017\\) 이다.
+
+## Quantizable Model and Quantized Inference
+
+- NMT 의 가장 큰 단점 중 하나로 연산량이 너무 높아 추론(inference) 시간이 길게 걸린다는 것이 있다.
+- 좋은 결과를 내려면 더 많은 연산을 해야 한다.
+- 이를 해결하기 위해 Quntized inference 를 수행한다.
+    - 수치 정확도를 낮추어 더 빠른 연산을 수행하게 된다.
+- 이미 많은 연구에서 Quantize 에 대한 연구를 진행하고 있다. (CNN 분야 등)
+- *stacked RNN* 구조에서는 아직 이를 적용한 분야가 없는데 여기서 해본다.
+- 사실 우리가 사용한 방식은 구글 내부에서 사용하는 하드웨어에 최적화된 방식이다.
+- quantize 로 인한 에러를 최소화하기 위해 학습시 모델에 약간의 제약을 가한다.
+    - 그리고 이러한 quantize 로 인한 에러가 거의 없음을 확인하였다.
+- 학습시 가한 제약으로 학습을 하고 나면 추론시에 별도의 추가 작업 없이도 이 quantize를 사용하는 효과.
+- 앞서 살펴보았던 *LSTM* 식을 떠올려보자. 이를 약간 수정한 형태이다.
+
+
+$${\bf c}_{'t}^{i}, {\bf m}_{t}^{i} = LSTM_i({\bf c}_{t-1}^{i}, {\bf m}_{t-1}^{i}, {\bf x}_{t}^{i-1};{\bf W}^{i}) \qquad{(5)}$$
+
+$${\bf c}_{t}^{i} = \max(-\delta, min(\delta, {\bf c}^{t}^{'i}) \qquad{(10)}$$
+
+$${\bf x}_{t}^{'i} = {\bf m}_{t}^{i} + {\bf x}_{t}^{i-1} \qquad{(10)}$$
+
+$${\bf x}_{t}^{'i} = \max(-\delta, min(\delta, {\bf x}_{t}^{'i}) \qquad{(10)}$$
+
+$${\bf c}_{t}^{'i+1}, {\bf m}_{t}^{i+1} = LSTM_{i+1}({\bf c}_{t-1}^{i+1}, {\bf m}_{t-1}^{i+1}, {\bf x}_{t}^{i};{\bf W}^{i+1}) \qquad{(10)}$$
+
+$${\bf c}_{t}^{'i+1} = \max(\delta, min(\delta, {\bf c}_{t}^{'i+1})) \qquad{(10)}$$
+
+- 식 10은 \\(LSTM\\) 내부 게이트 로직에서 사용되게 된다.
+- 참고로 \\(LSTM\\) 내부 식을 살펴보도록 하자.
+
+$${\bf W} = [{\bf W}_1, {\bf W}_2, {\bf W}_3, {\bf W}_4, {\bf W}_5, {\bf W}_6, {\bf W}_7, {\bf W}_8 } \qquad{(11)}$$
+
+$${\bf i}_t = sigmoid({\bf W}_1{\bf x}_t + {\bf W}_2{\bf m}_t) \qquad{(11)}$$
+
+$${\bf i'}_t =tanh({\bf W}_3{\bf x}_t + {\bf W}_4{\bf m}_t) \qquad{(11)}$$
+
+$${\bf f}_t = sigmoid({\bf W}_5{\bf x}_t + {\bf W}_6{\bf m}_t \qquad{(11)}$$
+
+$${\bf o}_t  sigmaoid({\bf W}_7{\bf x}_t + {\bf W}_8{bf m}_t \qquad{$(11)}}}
+
+
+
+
+
+- (참고) TensorFlow 에 포함된 [Quantization](https://www.tensorflow.org/versions/r0.11/how_tos/quantization/index.html) 을 참고하도록 하자.
 
