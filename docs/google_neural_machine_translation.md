@@ -344,29 +344,30 @@ $$cp({\bf X};{\bf Y}) = \beta * \sum_{i=1}^{|{\bf X}|} \log(\min(\sum_{j=1}^{|{\
 
 ## Experimetns & Results
 
-- 사용한 데이터는 \\(WMT En \to Fr\\) 과 \\(WMT En \to De\\) 이다.
-    - \\(WMT En \to Fr\\) : 35M 쌍의 문자열.
-    - \\(WMT En \to De\\) : 5M 쌍의 문자열.
+- 사용한 데이터는 \\(WMT\\) \\(En \to Fr\\) 과 \\(WMT\\) \\(En \to De\\) 이다.
+    - \\(WMT\\) \\(En \to Fr\\) : 35M 쌍의 문자열.
+    - \\(WMT\\) \\( En \to De\\) : 5M 쌍의 문자열.
 
 ### 평가방식
+
     - BLEU 점수. (Moses 에서 구현한 BLEU 점수 측정 방식을 사용)
     
 ### 학습 방법
+
 - TensorFlow 로 구현하여 사용
 - 병렬화 적용함. (12개의 독립 머신)
-- 파라미터는 모두 공유되고(shared) 업데이트 방식은 asynchronous 방식
-- 모든 파라미터들은 \\([-0.04, 0.04]\\)의 값으로 초기화하고 시작.
+- 파라미터는 모두 공유되고(shared) 업데이트 방식은 asynchronous 방식.
+- 모든 파라미터들은 \\([-0.04, 0.04]\\) 범위의 값으로 초기화하고 시작.
 - Adam 옵티마이져와 기본 SGD 방식을 혼합해서 사용.
     - 먼저 60K step 만큼은 Adam 방식을 사용하고 그 다음부터는 기본 SGD를 돌림.
-    - 우리가 해보니까 초기 학습 속도를 올리는데에는 Adam 이 짱인데 끝이 별로다. 그래서 SGD로 바꿈.
+    - 우리가 해보니까 초기 학습 속도를 올리는데에는 Adam 이 짱인데 끝이 별로다. 그래서 뒷 부분은 SGD로 바꿈.
 
-![figure.9]({{ site.baseurl }}/images/{{ page.group }}/f09.png){:class="center-block" height="450px"}     
+![figure.9]({{ site.baseurl }}/images/{{ page.group }}/f09.png){:class="center-block" height="450px"}
 
 - \\(lr\\) 은 \\(0.5\\) 를 사용하였다.
     - \\(1.2M\\) 까지 그대로 사용하다가 그 이후는 \\(200k\\) 단위마다 반씩 줄여가면서 \\(800k\\) 까지 학습.
 - 총 96대의 K80 GPU 장비에서 6일 걸림.
-- 오버피팅(overfeating)을 막기 위해 드롭아웃 쓴다. (\\(0.2 ~ 0.3\\) 정도의 비율.
+- 오버피팅(overfeating)을 막기 위해 드롭아웃 쓴다. (\\(0.2 ~ 0.3)\\) 정도의 비율.
     - 근데 이건 ML 모델에서만 사용하고 RL 모델에서는 안 씀.
     
-
 
