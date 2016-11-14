@@ -243,34 +243,130 @@ $$\mathcal{O}_{mixed}(\theta) = \alpha \times \mathcal{O}_{ML}(\theta) + \mathca
 - 앞서 살펴보았던 *LSTM* 식을 떠올려보자. 이를 약간 수정한 형태이다.
 
 
-$${\bf c}_{'t}^{i}, {\bf m}_{t}^{i} = LSTM_i({\bf c}_{t-1}^{i}, {\bf m}_{t-1}^{i}, {\bf x}_{t}^{i-1};{\bf W}^{i}) \qquad{(5)}$$
+$${\bf c}_{t}^{'i}, {\bf m}_{t}^{i} = LSTM_i({\bf c}_{t-1}^{i}, {\bf m}_{t-1}^{i}, {\bf x}_{t}^{i-1};{\bf W}^{i}) \qquad{(5)}$$
 
-$${\bf c}_{t}^{i} = \max(-\delta, min(\delta, {\bf c}^{t}^{'i}) \qquad{(10)}$$
+$${\bf c}_{t}^{i} = \max(-\delta, \min(\delta, {\bf c}_{t}^{'i})) \qquad{(10)}$$
 
 $${\bf x}_{t}^{'i} = {\bf m}_{t}^{i} + {\bf x}_{t}^{i-1} \qquad{(10)}$$
 
 $${\bf x}_{t}^{'i} = \max(-\delta, min(\delta, {\bf x}_{t}^{'i}) \qquad{(10)}$$
 
-$${\bf c}_{t}^{'i+1}, {\bf m}_{t}^{i+1} = LSTM_{i+1}({\bf c}_{t-1}^{i+1}, {\bf m}_{t-1}^{i+1}, {\bf x}_{t}^{i};{\bf W}^{i+1}) \qquad{(10)}$$
+$${\bf c}_{t}^{i+1}, {\bf m}_{t}^{i+1} = LSTM_{i+1}({\bf c}_{t-1}^{i+1}, {\bf m}_{t-1}^{i+1}, {\bf x}_{t}^{i};{\bf W}^{i+1}) \qquad{(10)}$$
 
 $${\bf c}_{t}^{'i+1} = \max(\delta, min(\delta, {\bf c}_{t}^{'i+1})) \qquad{(10)}$$
 
 - 식 10은 \\(LSTM\\) 내부 게이트 로직에서 사용되게 된다.
 - 참고로 \\(LSTM\\) 내부 식을 살펴보도록 하자.
 
-$${\bf W} = [{\bf W}_1, {\bf W}_2, {\bf W}_3, {\bf W}_4, {\bf W}_5, {\bf W}_6, {\bf W}_7, {\bf W}_8 } \qquad{(11)}$$
+$${\bf W} = [{\bf W}_1, {\bf W}_2, {\bf W}_3, {\bf W}_4, {\bf W}_5, {\bf W}_6, {\bf W}_7, {\bf W}_8 ] \qquad{(11)}$$
 
 $${\bf i}_t = sigmoid({\bf W}_1{\bf x}_t + {\bf W}_2{\bf m}_t) \qquad{(11)}$$
 
 $${\bf i'}_t =tanh({\bf W}_3{\bf x}_t + {\bf W}_4{\bf m}_t) \qquad{(11)}$$
 
-$${\bf f}_t = sigmoid({\bf W}_5{\bf x}_t + {\bf W}_6{\bf m}_t \qquad{(11)}$$
+$${\bf f}_t = sigmoid({\bf W}_5{\bf x}_t + {\bf W}_6{\bf m}_t) \qquad{(11)}$$
 
-$${\bf o}_t  sigmaoid({\bf W}_7{\bf x}_t + {\bf W}_8{bf m}_t \qquad{$(11)}}}
+$${\bf o}_t = sigmoid({\bf W}_7{\bf x}_t + {\bf W}_8{\bf m}_t) \qquad{(11)}$$
 
+$${\bf c}_t = {\bf c}_{t-1} \odot {\bf f}_{t} + {\bf i}_{t}^{'} \odot {\bf i}_{t} \qquad{(11)}$$
 
+$${\bf m}_t = {\bf c}_{t} \odot {\bf o}_{t} \qquad{$(11)}$$
 
+- quantized 시에 사용된 모든 실수 값은 (식 10과 11에서) 모두 8-bit 또는 16-bit 실수 값으로 처리된다.
+- 위에서 사용된 weight 행렬 \\({\bf W}\\) 는 사실 8-bit 정수 행렬 \\({\bf WQ}\\) 로 변환하여 사용한다.
 
+$$s_i = \max(abs({\bf W}[i,:])) \qquad{(12)}$$
+
+$${\bf WQ}[i,j] = round({\bf W}[i,j] / {\bf s}_i \times 127.0) \qquad{(12)}$$
+
+- \\({\bf c}\_t^i\\) 와 \\({\bf x}\_t^i\\) 는 모두 16-bit 정수 값으로 표현 가능하다.
+    - 이를 위해 \\([-\delta, \delta]\\) 범위를 사용한 것이다.
+- 모든 weight 행렬은 (위에서 언급한 것과 같이) 8-bit 정수로 처리된다.
+- 그리고 \\(sigmoid, tanh\\) 등의 함수와 element-wise 연산인 \\( (\odot, +) \\) 등도 모두 정수에 대한 연산으로 수행된다.
 
 - (참고) TensorFlow 에 포함된 [Quantization](https://www.tensorflow.org/versions/r0.11/how_tos/quantization/index.html) 을 참고하도록 하자.
+
+- - -
+
+- 마지막으로 이 논문에서 사용한 *log-linear softmax* 레이어를 살펴보자.
+- 학습 과정 동안 *decoder RNN* 에서는 출력 값 \\({\bf y}_t\\) 를 내어놓게 된다.
+    - 이를 이용하여 확률 \\({\bf p}_t\\) 를 만든다.
+
+$${\bf v}_t = {\bf W}_s \times {\bf y}_t \qquad{(13)}$$
+
+$${\bf v}_t^{'} = \max(-\gamma, min(\gamma, {\bf v}_t)) \qquad{(13)}$$
+
+$${\bf p}_t = softmax({\bf v}_t^{'}) \qquad{(13)}$$
+
+- 마찬가지로 여기서도 \\({\bf W}_s\\) 는 8-bit 의 정수값 행렬이다.
+- clipping 을 위한 계수 \\(\gamma\\) 는 실험에서는 25를 사용하였다.
+
+- 학습시 성능을 좀 살펴보자.
+
+![figure.5]({{ site.baseurl }}/images/{{ page.group }}/f05.png){:class="center-block" height="400px"} 
+
+- perplexity 는 거의 차이가 없다는 것을 알수 있다. (오히려 *quantized model* 이 더 성능이 좋다.)
+- 다음으로 전체 지표이다. TPU 가 정말 좋다는 것을 알수 있다. (TPU는 구글 자체 머신)
+
+![figure.6]({{ site.baseurl }}/images/{{ page.group }}/f06.png){:class="center-block" height="80px"} 
+
+
+## Decoder
+
+- 최종 출력 문자열 \\({\bf Y}\\) 를 만들기 위해 빔서치(beam search)를 사용한다.
+- 점수 함수 \\(s({\bf Y}, {\bf X})\\) 는 학습시 주어진다.
+- 여기서는 빔서치를 최적화하기 위한 두 가지 기법을 소개한다.
+    - coverage penalty
+    - length normalization
+    
+$$s({\bf Y}, {\bf X}) = \log(P({\bf Y}|{\bf X}))/lp({\bf Y}) + cp({\bf X};{\bf Y}) \qquad{(14)}$$
+
+$$lp({\bf Y}) = \frac{(5+|{\bf Y}|)^{\alpha}}{(5+1)^{\alpha}} \qquad{(14)}$$
+
+$$cp({\bf X};{\bf Y}) = \beta * \sum_{i=1}^{|{\bf X}|} \log(\min(\sum_{j=1}^{|{\bf Y}|}p_{i,j}, 1.0)), \qquad{(14)}$$
+
+- 먼저 Length Normalization 은 길이가 평가시 긴 문장의 확률 값이 더 작아지므로 이를 보정하기 위한 방법.
+    - 이를 위해 하이퍼 파라미터인 \\(\alpha\\) 를 사용한다.
+    - \\(\alpha\\) 는 보통 \\(0\\) ~ \\(1\\) 사이의 값을 사용한다. (실험에서는 \\(0.6\\) ~ \\(0.7\\) 사용)
+- Coverage penalty 는 잘 모르겠음.
+    - \\(p_{i,j}\\) 는 출력 단어 \\(y_j\\) 에서의 (즉, \\(j\\) 번째 위치에서의) attention 확률이 된다.
+    - encoder 에서의 확률 normalization 과 같다고 보는데 좀 더 확인이 필요하다.
+
+
+- 영어를 프랑스어로 바꿀 때 \\(\alpha\\) 와 \\(\beta\\) 값을 실험. (결과는 BLEU 값)
+    - RL 방식이 아니라 ML 방식임.
+
+![figure.7]({{ site.baseurl }}/images/{{ page.group }}/f07.png){:class="center-block" height="200px"} 
+
+- ML 방식을 쓰고 다시 RL 방식으로 튜닝한 방법.
+
+![figure.8]({{ site.baseurl }}/images/{{ page.group }}/f08.png){:class="center-block" height="200px"} 
+
+## Experimetns & Results
+
+- 사용한 데이터는 \\(WMT En \to Fr\\) 과 \\(WMT En \to De\\) 이다.
+    - \\(WMT En \to Fr\\) : 35M 쌍의 문자열.
+    - \\(WMT En \to De\\) : 5M 쌍의 문자열.
+
+### 평가방식
+    - BLEU 점수. (Moses 에서 구현한 BLEU 점수 측정 방식을 사용)
+    
+### 학습 방법
+- TensorFlow 로 구현하여 사용
+- 병렬화 적용함. (12개의 독립 머신)
+- 파라미터는 모두 공유되고(shared) 업데이트 방식은 asynchronous 방식
+- 모든 파라미터들은 \\([-0.04, 0.04]\\)의 값으로 초기화하고 시작.
+- Adam 옵티마이져와 기본 SGD 방식을 혼합해서 사용.
+    - 먼저 60K step 만큼은 Adam 방식을 사용하고 그 다음부터는 기본 SGD를 돌림.
+    - 우리가 해보니까 초기 학습 속도를 올리는데에는 Adam 이 짱인데 끝이 별로다. 그래서 SGD로 바꿈.
+
+![figure.9]({{ site.baseurl }}/images/{{ page.group }}/f09.png){:class="center-block" height="450px"}     
+
+- \\(lr\\) 은 \\(0.5\\) 를 사용하였다.
+    - \\(1.2M\\) 까지 그대로 사용하다가 그 이후는 \\(200k\\) 단위마다 반씩 줄여가면서 \\(800k\\) 까지 학습.
+- 총 96대의 K80 GPU 장비에서 6일 걸림.
+- 오버피팅(overfeating)을 막기 위해 드롭아웃 쓴다. (\\(0.2 ~ 0.3\\) 정도의 비율.
+    - 근데 이건 ML 모델에서만 사용하고 RL 모델에서는 안 씀.
+    
+
 
