@@ -86,11 +86,10 @@ $$P(y_i | y_0, y_1, y_2, ..., y_{i-1};{\bf x}_1, {\bf x}_2, ..., {\bf x_M}) \qqu
 
 - *attention* 모델은 사실 [이 논문](https://arxiv.org/pdf/1409.0473v7.pdf) 을 따라한 것이다.
 
-$$s_t = AttentionFunction({\bf y}_{i-1}, {\bf x}_t)\;\;\forall{t},\;\;1 \le t \le M  \qquad{(4)}$$
 
-$$p_t =\frac{\exp{(s_t)}}{\sum_{t=1}^{M} \exp{(s_t)}}\;\;\forall{t},\;\;1 \le t \le M  \qquad{(4)}$$
-
-$${\bf a}_t = \sum_{t=1}^{M} p_t \cdot {\bf x}_t \qquad{(4)}$$
+$$\begin{align}s_t &= AttentionFunction({\bf y}_{i-1}, {\bf x}_t)\;\;\forall{t},\;\;1 \le t \le M \\
+p_t &=\frac{\exp{(s_t)}}{\sum_{t=1}^{M} \exp{(s_t)}}\;\;\forall{t},\;\;1 \le t \le M \\
+{\bf a}_i &= \sum_{t=1}^{M} p_t \cdot {\bf x}_t \end{align} \qquad{(4)}$$
 
 
 ### Residual Connections
@@ -105,21 +104,17 @@ $${\bf a}_t = \sum_{t=1}^{M} p_t \cdot {\bf x}_t \qquad{(4)}$$
 
 - 일반적인 *LSTM* 모델의 수식은 다음과 같다.
 
-$${\bf c}_{t}^{i}, {\bf m}_{t}^{i} = LSTM_i({\bf c}_{t-1}^{i}, {\bf m}_{t-1}^{i}, {\bf x}_{t}^{i-1};{\bf W}^{i}) \qquad{(5)}$$
-
-$${\bf x}_{t}^{i} = {\bf m}_{t}^{i} \qquad{(5)}$$
-
-$${\bf c}_{t}^{i+1}, {\bf m}_{t}^{i+1} = LSTM_{i+1}({\bf c}_{t-1}^{i+1}, {\bf m}_{t-1}^{i+1}, {\bf x}_{t}^{i};{\bf W}^{i+1}) \quad{(5)}$$
+$$\begin{align}{\bf c}_{t}^{i}, {\bf m}_{t}^{i} &= LSTM_i({\bf c}_{t-1}^{i}, {\bf m}_{t-1}^{i}, {\bf x}_{t}^{i-1};{\bf W}^{i}) \\
+{\bf x}_{t}^{i} &= {\bf m}_{t}^{i} \\
+{\bf c}_{t}^{i+1}, {\bf m}_{t}^{i+1} &= LSTM_{i+1}({\bf c}_{t-1}^{i+1}, {\bf m}_{t-1}^{i+1}, {\bf x}_{t}^{i};{\bf W}^{i+1}) \end{align}\quad{(5)}$$
 
 - 이 때 \\({\bf x}\_{t}^{i}\\) 는 \\(LSTM\\) 의 스텝 \\(t\\) 일 때의 입력 값으로 사용된다.
 - \\({\bf m}\_{t}^{i}\\) 와 \\({\bf c}\_{t}^{i}\\) 는 각각 \\(LSTM\\) 의 Hidden 상태와 메모리 값을 의미한다.
 - 여기에 redidual 을 추가한 모델은 다음과 같다.
 
-$${\bf c}_{t}^{i}, {\bf m}_{t}^{i} = LSTM_i({\bf c}_{t-1}^{i}, {\bf m}_{t-1}^{i}, {\bf x}_{t}^{i-1};{\bf W}^{i}) \qquad{(5)}$$
-
-$${\bf x}_{t}^{i} = {\bf m}_{t}^{i} + {\bf x}_{t}^{i-1} \qquad{(5)}$$
-
-$${\bf c}_{t}^{i+1}, {\bf m}_{t}^{i+1} = LSTM_{i+1}({\bf c}_{t-1}^{i+1}, {\bf m}_{t-1}^{i+1}, {\bf x}_{t}^{i};{\bf W}^{i+1}) \quad{(5)}$$
+$$\begin{align}{\bf c}_{t}^{i}, {\bf m}_{t}^{i} &= LSTM_i({\bf c}_{t-1}^{i}, {\bf m}_{t-1}^{i}, {\bf x}_{t}^{i-1};{\bf W}^{i}) \\
+{\bf x}_{t}^{i} &= {\bf m}_{t}^{i} + {\bf x}_{t}^{i-1} \\
+{\bf c}_{t}^{i+1}, {\bf m}_{t}^{i+1} &= LSTM_{i+1}({\bf c}_{t-1}^{i+1}, {\bf m}_{t-1}^{i+1}, {\bf x}_{t}^{i};{\bf W}^{i+1}) \end{align}\quad{(6)}$$
 
 - 아주 간단한 변경만으로도 엄청난 효과를 낸다. 
 - 실험 결과 8 레이어의 \\(LSTM\\) 이 가장 효과가 좋았다. (*encoder*, *decoder* 각각)
@@ -243,41 +238,29 @@ $$\mathcal{O}_{mixed}(\theta) = \alpha \times \mathcal{O}_{ML}(\theta) + \mathca
 - 앞서 살펴보았던 *LSTM* 식을 떠올려보자. 이를 약간 수정한 형태이다.
 
 
-$${\bf c}_{t}^{'i}, {\bf m}_{t}^{i} = LSTM_i({\bf c}_{t-1}^{i}, {\bf m}_{t-1}^{i}, {\bf x}_{t}^{i-1};{\bf W}^{i}) \qquad{(5)}$$
-
-$${\bf c}_{t}^{i} = \max(-\delta, \min(\delta, {\bf c}_{t}^{'i})) \qquad{(10)}$$
-
-$${\bf x}_{t}^{'i} = {\bf m}_{t}^{i} + {\bf x}_{t}^{i-1} \qquad{(10)}$$
-
-$${\bf x}_{t}^{'i} = \max(-\delta, min(\delta, {\bf x}_{t}^{'i}) \qquad{(10)}$$
-
-$${\bf c}_{t}^{i+1}, {\bf m}_{t}^{i+1} = LSTM_{i+1}({\bf c}_{t-1}^{i+1}, {\bf m}_{t-1}^{i+1}, {\bf x}_{t}^{i};{\bf W}^{i+1}) \qquad{(10)}$$
-
-$${\bf c}_{t}^{'i+1} = \max(\delta, min(\delta, {\bf c}_{t}^{'i+1})) \qquad{(10)}$$
+$$\begin{align}{\bf c}_{t}^{'i}, {\bf m}_{t}^{i} &= LSTM_i({\bf c}_{t-1}^{i}, {\bf m}_{t-1}^{i}, {\bf x}_{t}^{i-1};{\bf W}^{i}) \\
+{\bf c}_{t}^{i} &= \max(-\delta, \min(\delta, {\bf c}_{t}^{'i})) \\
+{\bf x}_{t}^{'i} &= {\bf m}_{t}^{i} + {\bf x}_{t}^{i-1} \\
+{\bf x}_{t}^{'i} &= \max(-\delta, min(\delta, {\bf x}_{t}^{'i}) \\
+{\bf c}_{t}^{i+1}, {\bf m}_{t}^{i+1} &= LSTM_{i+1}({\bf c}_{t-1}^{i+1}, {\bf m}_{t-1}^{i+1}, {\bf x}_{t}^{i};{\bf W}^{i+1}) \\
+{\bf c}_{t}^{'i+1} &= \max(\delta, min(\delta, {\bf c}_{t}^{'i+1})) \end{align}\qquad{(10)}$$
 
 - 식 10은 \\(LSTM\\) 내부 게이트 로직에서 사용되게 된다.
 - 참고로 \\(LSTM\\) 내부 식을 살펴보도록 하자.
 
-$${\bf W} = [{\bf W}_1, {\bf W}_2, {\bf W}_3, {\bf W}_4, {\bf W}_5, {\bf W}_6, {\bf W}_7, {\bf W}_8 ] \qquad{(11)}$$
-
-$${\bf i}_t = sigmoid({\bf W}_1{\bf x}_t + {\bf W}_2{\bf m}_t) \qquad{(11)}$$
-
-$${\bf i'}_t =tanh({\bf W}_3{\bf x}_t + {\bf W}_4{\bf m}_t) \qquad{(11)}$$
-
-$${\bf f}_t = sigmoid({\bf W}_5{\bf x}_t + {\bf W}_6{\bf m}_t) \qquad{(11)}$$
-
-$${\bf o}_t = sigmoid({\bf W}_7{\bf x}_t + {\bf W}_8{\bf m}_t) \qquad{(11)}$$
-
-$${\bf c}_t = {\bf c}_{t-1} \odot {\bf f}_{t} + {\bf i}_{t}^{'} \odot {\bf i}_{t} \qquad{(11)}$$
-
-$${\bf m}_t = {\bf c}_{t} \odot {\bf o}_{t} \qquad{$(11)}$$
+$$\begin{align}{\bf W} &= [{\bf W}_1, {\bf W}_2, {\bf W}_3, {\bf W}_4, {\bf W}_5, {\bf W}_6, {\bf W}_7, {\bf W}_8 ] \\
+{\bf i}_t &= sigmoid({\bf W}_1{\bf x}_t + {\bf W}_2{\bf m}_t) \\
+{\bf i'}_t &=tanh({\bf W}_3{\bf x}_t + {\bf W}_4{\bf m}_t) \\
+{\bf f}_t &= sigmoid({\bf W}_5{\bf x}_t + {\bf W}_6{\bf m}_t) \\
+{\bf o}_t &= sigmoid({\bf W}_7{\bf x}_t + {\bf W}_8{\bf m}_t) \\
+{\bf c}_t &= {\bf c}_{t-1} \odot {\bf f}_{t} + {\bf i}_{t}^{'} \odot {\bf i}_{t} \\
+{\bf m}_t &= {\bf c}_{t} \odot {\bf o}_{t} \end{align}\qquad{(11)}$$
 
 - quantized 시에 사용된 모든 실수 값은 (식 10과 11에서) 모두 8-bit 또는 16-bit 실수 값으로 처리된다.
 - 위에서 사용된 weight 행렬 \\({\bf W}\\) 는 사실 8-bit 정수 행렬 \\({\bf WQ}\\) 로 변환하여 사용한다.
 
-$$s_i = \max(abs({\bf W}[i,:])) \qquad{(12)}$$
-
-$${\bf WQ}[i,j] = round({\bf W}[i,j] / {\bf s}_i \times 127.0) \qquad{(12)}$$
+$$\begin{align}s_i &= \max(abs({\bf W}[i,:])) \\
+{\bf WQ}[i,j] &= round({\bf W}[i,j] / {\bf s}_i \times 127.0) \end{align}\qquad{(12)}$$
 
 - \\({\bf c}\_t^i\\) 와 \\({\bf x}\_t^i\\) 는 모두 16-bit 정수 값으로 표현 가능하다.
     - 이를 위해 \\([-\delta, \delta]\\) 범위를 사용한 것이다.
@@ -292,11 +275,9 @@ $${\bf WQ}[i,j] = round({\bf W}[i,j] / {\bf s}_i \times 127.0) \qquad{(12)}$$
 - 학습 과정 동안 *decoder RNN* 에서는 출력 값 \\({\bf y}_t\\) 를 내어놓게 된다.
     - 이를 이용하여 확률 \\({\bf p}_t\\) 를 만든다.
 
-$${\bf v}_t = {\bf W}_s \times {\bf y}_t \qquad{(13)}$$
-
-$${\bf v}_t^{'} = \max(-\gamma, min(\gamma, {\bf v}_t)) \qquad{(13)}$$
-
-$${\bf p}_t = softmax({\bf v}_t^{'}) \qquad{(13)}$$
+$$\begin{align}{\bf v}_t &= {\bf W}_s \times {\bf y}_t \\
+{\bf v}_t^{'} &= \max(-\gamma, min(\gamma, {\bf v}_t)) \\
+{\bf p}_t &= softmax({\bf v}_t^{'})\end{align}\qquad{(13)}$$
 
 - 마찬가지로 여기서도 \\({\bf W}_s\\) 는 8-bit 의 정수값 행렬이다.
 - clipping 을 위한 계수 \\(\gamma\\) 는 실험에서는 25를 사용하였다.
@@ -319,11 +300,9 @@ $${\bf p}_t = softmax({\bf v}_t^{'}) \qquad{(13)}$$
     - coverage penalty
     - length normalization
     
-$$s({\bf Y}, {\bf X}) = \log(P({\bf Y}|{\bf X}))/lp({\bf Y}) + cp({\bf X};{\bf Y}) \qquad{(14)}$$
-
-$$lp({\bf Y}) = \frac{(5+|{\bf Y}|)^{\alpha}}{(5+1)^{\alpha}} \qquad{(14)}$$
-
-$$cp({\bf X};{\bf Y}) = \beta * \sum_{i=1}^{|{\bf X}|} \log(\min(\sum_{j=1}^{|{\bf Y}|}p_{i,j}, 1.0)), \qquad{(14)}$$
+$$\begin{align}s({\bf Y}, {\bf X}) &= \log(P({\bf Y}|{\bf X}))/lp({\bf Y}) + cp({\bf X};{\bf Y}) \\
+lp({\bf Y}) &= \frac{(5+|{\bf Y}|)^{\alpha}}{(5+1)^{\alpha}} \\
+cp({\bf X};{\bf Y}) &= \beta * \sum_{i=1}^{|{\bf X}|} \log(\min(\sum_{j=1}^{|{\bf Y}|}p_{i,j}, 1.0)), \end{align}\qquad{(14)}$$
 
 - 먼저 Length Normalization 은 길이가 평가시 긴 문장의 확률 값이 더 작아지므로 이를 보정하기 위한 방법.
     - 이를 위해 하이퍼 파라미터인 \\(\alpha\\) 를 사용한다.
@@ -350,7 +329,7 @@ $$cp({\bf X};{\bf Y}) = \beta * \sum_{i=1}^{|{\bf X}|} \log(\min(\sum_{j=1}^{|{\
 
 ### 평가방식
 
-    - BLEU 점수. (Moses 에서 구현한 BLEU 점수 측정 방식을 사용)
+- BLEU 점수. (Moses 에서 구현한 BLEU 점수 측정 방식을 사용)
     
 ### 학습 방법
 
@@ -369,5 +348,9 @@ $$cp({\bf X};{\bf Y}) = \beta * \sum_{i=1}^{|{\bf X}|} \log(\min(\sum_{j=1}^{|{\
 - 총 96대의 K80 GPU 장비에서 6일 걸림.
 - 오버피팅(overfeating)을 막기 위해 드롭아웃 쓴다. (\\(0.2 ~ 0.3)\\) 정도의 비율.
     - 근데 이건 ML 모델에서만 사용하고 RL 모델에서는 안 씀.
-    
+
+- - -
+
+- 그 외 실험 결과는 생략한다.
+
 
