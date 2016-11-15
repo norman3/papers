@@ -37,7 +37,7 @@ link_url: https://arxiv.org/abs/1609.08144
 
 ## Related Work
     
-- NMT 이전에는 SMT (Statistical Machine Translation) 모델이 주류였음. ( [참고 동영상](https://youtu.be/cgpHy2D_5o4?list=PLO9y7hOkmmSH8_IPjBUf7msTyLIBsV56b) )
+- NMT 이전에는 SMT (Statistical Machine Translation) 모델이 주류였음. ( [참고 동영상](https://youtu.be/cgpHy2D_5o4?list=PLO9y7hOkmmSH8_IPjBUf7msTyLIBsV56b){:target="_blank"} )
 - 현실적은 구현 방법은 *Phrase-based Model* 였다. (단어들을 구 단위로 묶어 번역 처리함)
 - 이 논문은 NMT 와 관련된 논문이니 예전 것들은 접어두고 NMT 에만 집중하자.
 
@@ -84,7 +84,7 @@ $$P(y_i | y_0, y_1, y_2, ..., y_{i-1};{\bf x}_1, {\bf x}_2, ..., {\bf x_M}) \qqu
     - *softmax* 를 이용하여 출력할 단어를 결정하게 된다.
 - 보통 *LSTM* 이 깊어질수록 (레이어를 올릴수록) 성능이 좋다는 보고가 있는데 여기서도 마찬가지였다.
 
-- *attention* 모델은 사실 [이 논문](https://arxiv.org/pdf/1409.0473v7.pdf) 을 따라한 것이다.
+- *attention* 모델은 사실 [이 논문](https://arxiv.org/pdf/1409.0473v7.pdf){:target="_blank"} 을 따라한 것이다.
 
 
 $$\begin{align}s_t &= AttentionFunction({\bf y}_{i-1}, {\bf x}_t)\;\;\forall{t},\;\;1 \le t \le M \\
@@ -169,7 +169,7 @@ $$\begin{align}{\bf c}_{t}^{i}, {\bf m}_{t}^{i} &= LSTM_i({\bf c}_{t-1}^{i}, {\b
 - 마찬가지로 "feud" 는 "_fe" 와 "ud" 로 나누어진다.
 - "_" 는 시작 문자라는 의미로 붙인다.
 - 이 방식은 *language-model* likelihood 값을 최대화하는 방식으로 학습을 하여 구성한다.
-    - [이 문서](http://www.australianscience.com.au/research/google/37842.pdf) 를 참고하라고 한다.
+    - [이 문서](http://www.australianscience.com.au/research/google/37842.pdf){:target="_blank"} 를 참고하라고 한다.
     - 위 논문과 다르게 구현된 내용은 시작 심볼(start symbol)은 사용하였지만 종료 심볼(end symbol)은 사용치 않는다고.
 - 지나치게 세세하게 나누면 사전에 포함되어야 할 단어 수가 너무 많아지므로 적당한 수준으로 나눈다.
     - 실험에서는 wordpiece 조각을 약 8k ~ 32k 에서 좋은 결과를 얻었다. (BLUE 기준)
@@ -267,7 +267,7 @@ $$\begin{align}s_i &= \max(abs({\bf W}[i,:])) \\
 - 모든 weight 행렬은 (위에서 언급한 것과 같이) 8-bit 정수로 처리된다.
 - 그리고 \\(sigmoid, tanh\\) 등의 함수와 element-wise 연산인 \\( (\odot, +) \\) 등도 모두 정수에 대한 연산으로 수행된다.
 
-- (참고) TensorFlow 에 포함된 [Quantization](https://www.tensorflow.org/versions/r0.11/how_tos/quantization/index.html) 을 참고하도록 하자.
+- (참고) TensorFlow 에 포함된 [Quantization](https://www.tensorflow.org/versions/r0.11/how_tos/quantization/index.html){:target="_blank"} 을 참고하도록 하자.
 
 - - -
 

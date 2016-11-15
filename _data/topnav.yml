@@ -3,7 +3,17 @@ topnav:
     url: /
   - title: Title
     items:
+      - title: "Google Inception Models"
+        group: "google_inception"
+        url: /docs/google_inception
       - title: "Decoupled Neural Interfaces using Synthetic Gradients"
         group: "synthetic_gradients"
         url: /docs/synthetic_gradients
+      - title: "Neural Turing Machine"
+        group: "neural_turing_machine"
+        url: /docs/neural_turing_machine
+      - title: "Google Neural Machine Translation"
+        group: "gmnt"
+        url: /docs/google_neural_machine_translation
+        
 
