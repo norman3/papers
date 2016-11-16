@@ -172,7 +172,7 @@ $$\begin{align}{\bf c}_{t}^{i}, {\bf m}_{t}^{i} &= LSTM_i({\bf c}_{t-1}^{i}, {\b
     - [이 문서](http://www.australianscience.com.au/research/google/37842.pdf){:target="_blank"} 를 참고하라고 한다.
     - 위 논문과 다르게 구현된 내용은 시작 심볼(start symbol)은 사용하였지만 종료 심볼(end symbol)은 사용치 않는다고.
 - 지나치게 세세하게 나누면 사전에 포함되어야 할 단어 수가 너무 많아지므로 적당한 수준으로 나눈다.
-    - 실험에서는 wordpiece 조각을 약 8k ~ 32k 에서 좋은 결과를 얻었다. (BLUE 기준)
+    - 실험에서는 wordpiece 조각을 약 8k ~ 32k 에서 좋은 결과를 얻었다. (BLEU 기준)
 - 이러한 방식으로도 얻을 수 없었던 단어(rare word)들은 앞서 언급한대로 *copy model* 을 사용하였다.
 
 
@@ -194,8 +194,8 @@ $$\begin{align}{\bf c}_{t}^{i}, {\bf m}_{t}^{i} &= LSTM_i({\bf c}_{t-1}^{i}, {\b
 
 $$\mathcal{O}_{ML}({\bf \theta}) = \sum_{i=1}^{N}\log P_{\theta}({\bf Y}^{*(i)}|{\bf X}^{(i)}) \qquad{(7)}$$
 
-- 이 함수의 가장 큰 문제는 *BLUE* 평가 지표가 목적 함수와 바로 부합되지 않는다는 사실.
-- (참고) *BLUE* 평가란?
+- 이 함수의 가장 큰 문제는 *BLEU* 평가 지표가 목적 함수와 바로 부합되지 않는다는 사실.
+- (참고) *BLEU* 평가란?
 
 $$BP=\left\{\begin{array}{11}1 & if\; c \gt r\\e^{1-r/c} & if\; c \le r\end{array}\right.$$
 
