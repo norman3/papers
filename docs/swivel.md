@@ -93,9 +93,9 @@ $$M_{ij} = A_{i}^{T}B_{j}$$
 
 ### PMI (Point-wise mutual Information)
 
-- co-currence count 만으로 행렬을 만들면 df 값이 높은 단어의 가중치가 너무 올라가게 된다.
-- 그래서 tf-idf 비스므리한 PMI value를 실제 값으로 사용하게 된다.
-
+- co-currence count 만으로 행렬을 만들면 Freq. 값이 높은 단어의 가중치가 너무 올라가게 된다.
+    - 이런 경우 실제로는 의미없는 단어들의 가중치가 상대적으로 올라감.
+    - 그래서 tf-idf 와 같은 concept으로 PMI value를 실제 값으로 사용하게 된다.
 
 $$pmi(i, j) = \log{\frac{P(i,j)}{P(i)P(j)}} \qquad (1)$$
 
@@ -135,3 +135,59 @@ $$pmi(i, j) = \log{\frac{x_{ij} |D|}{x_{i*}x_{*j}}} = \log{x_{i}} + \log{|D|} - 
 ![figure.7]({{ site.baseurl }}/images/{{ page.group }}/f07.png){:class="center-block" height="150px"}
 
 - 여기서 \\(f(x\_{ij})\\) 함수는 사용자가 적당히 추가하는 보정 함수로 실험에서는 \\(\sqrt{x\_{ij}}\\) 를 사용함.
+- 앞서 설명한대로 \\(x\_{ij}=0\\) 인 경우에는 \\(pmi\\) 의 값이 \\(-\infty\\) 가 되므로 이를 처리해야 한다.
+- 따라서 \\(x\_{ij}=0\\) 때의 Loss 를 다르게 처리함.
+    - \\(x\_{ij} > 0\\) 인 경우에는 \\(L\_{1}\\) Loss를 사용하고 (squared error)
+    - \\(x\_{ij} = 0\\) 인 경우에는 \\(L\_{0}\\) Loss를 사용 (soft hinge)
+    
+
+![figure.8]({{ site.baseurl }}/images/{{ page.group }}/f08.png){:class="center-block" height="250px"}
+
+- 좀 더 고민해보자.
+    - 단어 \\(i\\) 와 단어 \\(j\\) 가 Freq. 가 매우 낮은 단어라면 \\(x\_{ij}=0\\) 는 학습 문서의 한계로 un-observed 상태라고 고려할수도 있음.
+    - 반면 단어 \\(i\\) 와 단어 \\(j\\) 가 Freq. 가 높은 단어라면 이 경우에는 오히려 *anti-correlated* 의 증거라고 생각할 수 있다.
+- 이를 반영하기 위해 우리는 *smoothing* 기법을 도입한다.
+    - 별거 없고 \\(x\_{ij} = 0\\) 인 경우에 \\(L\_{0}\\) Loss를 사용하되 \\(x\_{ij} = 1\\) 로 취급
+    - 이렇게 하면 Loss 는 다음과 같이 변경된다.
+    
+![figure.9]({{ site.baseurl }}/images/{{ page.group }}/f09.png){:class="center-block" height="100px"}
+
+- 만약 \\(i\\) 와 \\(j\\) 가 고-빈도 word라고 생각해보자.
+    - 그러면 \\(\log{x\_{i\*}}\\) 와 \\(\log{x\_{\*j}}\\) 의 값이 커지게 된다.
+    - 이 경우 Loss 값을 작게 하는 방법은 \\(w\_{i}^T w\_{j}\\) 값을 작게 하거나 음수로 만들어야 한다.
+    - 이 의미는 두 벡터의 co-occurrence 값을 anti-correlation 으로 간주하겠다는 의미가 된다.
+- 반대로 \\(i\\) 와 \\(j\\) 가 저-빈도 word라고 생각해보자.
+    - 이 경우에는 \\(\log{x\_{i\*}}\\) 와 \\(\log{x\_{\*j}}\\) 의 값이 작으므로 \\(w\_{i}^T w\_{j}\\) 에 대한 제약이 없어진다.
+    - 이런 경우에 사용하기 적당한 것이 soft hinge 이므로 이를 도입한 것.
+    
+
+![figure.10]({{ site.baseurl }}/images/{{ page.group }}/f10.png){:class="center-block" height="400px"}
+
+
+### Experiments
+
+![figure.11]({{ site.baseurl }}/images/{{ page.group }}/f11.png){:class="center-block" height="200px"}
+
+- 학습 데이터는 여러 종류의 데이터를 intrinsic 방식으로 해결.
+- Base-line 으로는 word2vec 모델과 Glove 모델을 사용.
+    - word2vec
+        - skipgram, neg-sampling size 는 5.
+        - 65번 반복. rare set은 300 번 반복
+        - Mikolov 가 사용한 방식대로 \\(w\_{i}\\) 만 사용. (더 성능이 좋다.)
+    - GloVe
+        - GloVe 의 경우에는 두 embedding 벡터의 평균값을 사용한다. (이게 더 성능이 좋다.)
+        - 100 반복. lr 은 0.05 tkdyd
+        - cut-off alpha 값은 0.75
+    - Swivel
+        - 하모니 스케일 방식의 window 방식 사용.
+            - 가장 가까운 word는 1점. 그 다음은 0.5점, 그 다음 word는 1/3점.
+        - 100만 step 반복
+        - 약 400,000 개의 단어. k=4096 사용. (블록 크기)
+            - 이렇게 하면 약 100x100 개의 블록이 생성됨.
+        - GloVe 와 마찬가지로 두 벡터의 평균을 사용.
+        - 함수 \\(f(x)\\) 는 다음과 같다.
+            - 최적의 값은 \\(\alpha = 1/2\\) 이고 \\(b\_0 = 0.1\\), \\(b=1/4\\) 이다.
+
+$$f(x_{ij}) = b_0 + b x_{ij}^{\alpha}$$
+
+- 실제 구현 코드가 제공된다. : [링크](https://github.com/tensorflow/models/tree/master/swivel)
