@@ -53,7 +53,7 @@ link_url: "https://arxiv.org/abs/1704.03549"
 - 다음과 같은 과정으로 FSNS 이미지를 생성함.
     - 일단 이미지에서 주소 간판을 찾을 수 있는 Detector를 사용. 이를 프랑스 거리 뷰에서 찾음. Detector는 이미지 내에서 OD를 수행. (박스 위치 반환)
     - 지정학적으로(geographic location) 동일한 위치에 있는 이미지를 그룹으로 묶은 과정을 진행 (spatially cluster)
-    - [reCAPTCHA](https://developers.google.com/recaptcha/intro){:target="_blank"} 를 이용하여 TEXT를 추출
+    - [reCAPTCHA](https://developers.google.com/recaptcha/intro){:target="blank"} 를 이용하여 TEXT를 추출
     - 알바생들이 후처리 작업을 통해 보정 작업을 진행.
     - 이미지를 지리적으로 버킷 단위로 나누어 구성하고 train, validation, test가 서로 지역적으로 분리된 데이터로 생성되도록 구성. (서로 중복되지 않도록)
     - 도로(Road)의 경우 지역적으로는 떨어져있지만 길게 이어지기 때문에 동일한 도로명이 여러 지역에서 노출될 수 있다. 이것은 후처리로 중복 제거.
@@ -137,7 +137,7 @@ $$c_t = {arg\max}_{c} \left(\widehat{o}_t(c)\right)\qquad{(5)}$$
 - 예전 attention 방식과 약간 다른것이 있는데 데이터 자체에 위치 정보를 추가한다.
 - 먼저 예전 모델들이 사용하던 일반적인 attention 식을 보자.
 
-$$\alpha_{t, i, j} = softmax(V_a \circ \tanh(W_s s_t + W_f f_{i,j,:})\qquad{(6)}$$
+$$\alpha_{t, i, j} = softmax(V_a \circ \tanh(W_s s_t + W_f f_{i,j,:}))\qquad{(6)}$$
 
 - 여기서 \\( \circ \\) 은 element 단위로 곱(multiplication)을 하는 것을 의미한다.
 - 이 식을 해석(?)해 보자면,
@@ -154,3 +154,53 @@ $$W_s s_t + W_{f_1}f_{i,j,:} + W_{f_2}e_i + W_{f_3}e_j\qquad{(7)}$$
 - 여기서 \\(e\_{i}\\)와 \\(e\_{j}\\) 는 각각 \\(i\\) 와 \\(j\\) 에 대한 one-hot 인코딩 값이다.
 
 ![figure.4]({{ site.baseurl }}/images/{{ page.group }}/f04.png){:class="center-block" height="250px"}
+
+## 학습 (training)
+
+- 입력 데이터는 4개의 이미지가 같이 들어간다.
+    - 따라서 하나의 feature map 의 크기는 16x16x320 이고 4장이므로 64x16x320이 된다.
+- MLE를 최대화하는 식을 목적 함수로 사용한다.
+    - 따라서 \\(\sum\_{t=1}^{T}\log p(y\_t\|y\_{1:t-1}, x)\\)를 최대화하는 형태로 구현한다.
+    - 이 때 \\(x\\) 는 입력 이미지가 되고 \\(y\_{t}\\) 는 \\(t\\) 위치를 가지는 문자를 의미한다.
+    - \\(T=37\\) 을 사용한다. (FSNS Dataset)
+- 보통 이러한 스타일의 학습에는 CTC(Connectionist Temporal Classification) loss를 사용한다.
+    - 이와 관련된 내용은 이 [문서](https://gab41.lab41.org/speech-recognition-you-down-with-ctc-8d3b558943f0){:target="blank"} 를 참고하자.
+- 하지만 여기서는 autoregressive connection을 사용하기 때문에 CTC는 사용할 수 없다.
+    - autoregressive 는 중간 출력의 결과가 입력으로 활용된다고 생각하면 된다.
+    - 하지만 실제 해보니 autoregressive 방식이 성능도 좋고 (6% 성능 증가) 학습 속도도 빠르다. (2x)
+- 학습과 관련된 Hyper Parameter
+    - lr : 0.002
+    - decay factor : 0.1 after 1,200,200 step
+    - total step : 2,000,000
+    - data augmentation 사용
+        - 랜덤 크롭.
+            - 원본 이미지의 0.8% 면적을 가지는 이미지로 크롭
+            - aspect ratio 는 0.8~1.2로 유지 (xy비)
+        - 크롭된 이미지를 resize
+        - 랜덤 distotion 추가
+        - contrast, hue, brightness, saturation 변환
+    - Weight decay : 0.0000004
+    - Label-smoothing : 0.9
+    - LSTM Clipping : 10
+    - LSTM Unit : 256
+    - BatchSize : 32 (12 for resnet-v2 due to GPU MEM.)
+    - Sync mode : Asynchronous Update on 40 Maching.
+- 사용된 데이터 집합
+    - FSNS Dataset
+    - SVBN (Street Business Names) Dataset
+        - 이미지의 크기는 352x352x3
+        - 모든 단어 집합은 33개의 symbol + 128 영어 글자
+
+## 실험 결과
+
+![figure.5]({{ site.baseurl }}/images/{{ page.group }}/f05.png){:class="center-block" height="250px"}
+
+![figure.6]({{ site.baseurl }}/images/{{ page.group }}/f06.png){:class="center-block" height="350px"}
+
+![figure.7]({{ site.baseurl }}/images/{{ page.group }}/f07.png){:class="center-block" height="350px"}
+
+![figure.8]({{ site.baseurl }}/images/{{ page.group }}/f08.png){:class="center-block" height="350px"}
+
+- 간단하게 attention 결과를 보자.
+
+![figure.9]({{ site.baseurl }}/images/{{ page.group }}/f09.png){:class="center-block" height="1000px"}
