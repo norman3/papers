@@ -119,3 +119,62 @@ $$c_i^l = \sum_{j=1}^{m} a_{ij}^{l}(z_j^u + e_j)\qquad{(2)}$$
 ![figure.3]({{ site.baseurl }}/images/{{ page.group }}/f03.gif){:class="center-block" height="550px"}
 
 
+
+## Normalization 전략
+
+- Weight Normalization
+    - 우선, 이 논문에서는 Batch Normalization은 사용하지 않는다.
+        - 이전 논문들에서 이미지의 경우 CNN에서 BN이 좋은 성능을 보이지만 문서와 관련된 CNN에서는 별로 품질이 좋지 않다는 것을 확인했다고 한다.
+        - 그래서 대신 여기서는 Weight Normalization이란 기법을 쓴다.
+        - BN은 Batch 에 포함된 Sample에 영향을 받는데 WN은 그런 방식은 아니다.
+            - 가중치(W)를 정규화
+            - CNN의 경우 RNN에 비해 W 갯수가 적다. 이런데 유리하다.
+            - 보통 BN에 대해 저연산비용을 들이면서 근사를 할 수 있는 모델로 알려져 있다.
+            
+
+- Weight Initialization
+    - W를 초기화하는 방법은 참 여러가지인데 가장 간단한 방법은 0에 가까운 값을 random 설정하는 것.
+    - 여기서는 아주 **진지** 하게 분산을 고려하여 초기 W 바운드를 검증한다.
+    - 이전부터 이런 류의 초기화 방식에 관련된 논문들이 많았는데,
+    - 여기서도 이를 비슷한 방식으로 증명하여 초기값 범위를 설정함.
+
+
+## Experiments
+
+- 실험 결과는 간단하게 정리하자.
+- 사용되는 데이터는 주로 WMT 데이터 ([링크](http://www.statmt.org/wmt16/))
+    - 2006년부터 시작된 workshop으로 매년 데이터 set을 제공하는 듯 하다. (task 진행)
+    - [ACL](http://acl2016.org/) 행사 때 함께 진행되는 task인 듯.
+    - WMT16은 영어를 불가리아어, 치코어, 독일어, 스페인어, 바스크어, 네덜란드어, 포르투칼어 등으로 번역 (IT 관련 자료임)
+
+- 사용된 모델의 파라미터 정리
+    - encoder, decoder 에 사용된 hidden layer 크기는 512
+    - Nesterov Gradient Method ([링크](https://www2.cs.uic.edu/~zhangx/teaching/agm.pdf)) 사용
+        - momentum : 0.99
+        - lr : 0.25
+    - batch size : 64 문장 단위
+        - GPU 메모리에 맞춘 크기
+    - Dropout 사용 (입력 convolution 영역)
+- 구현
+    - Torch 로 구현되어 있음. 
+    - M40 GPU 장비 (single)
+    - 영어-프랑스어(WMT14) 번역에는 Multi-GPU 사용 (single machine)
+
+- 평가
+    - Word-base 방식과 BPE 방식을 사용
+        - Word-base 방식은 Voca 를 구축하고 OOV가 발생하면 Copy를 한다.
+        - BPE (Byte Pair Encodeing) 은 다음 [논문](https://arxiv.org/pdf/1508.07909.pdf)을 참고하자.
+           - 56개는 복합어, 21개는 이름. 6개는 외래어였다.
+            - 아 OOV에 대해서는 쪼개어서 subword를 구성하면 성능이 좋아질 수 있겠구나.
+            - 그냥 "`lower` 단어 같은 걸 `low` + `er` 등으로 나누어볼 수 있다" 정도로 받아들이도록 하자.
+
+
+![figure.4]({{ site.baseurl }}/images/{{ page.group }}/f04.png){:class="center-block" height="450px"}
+
+![figure.5]({{ site.baseurl }}/images/{{ page.group }}/f05.png){:class="center-block" height="450px"}
+
+![figure.6]({{ site.baseurl }}/images/{{ page.group }}/f06.png){:class="center-block" height="450px"}
+
+![figure.7]({{ site.baseurl }}/images/{{ page.group }}/f07.png){:class="center-block" height="450px"}
+
+![figure.8]({{ site.baseurl }}/images/{{ page.group }}/f08.png){:class="center-block" height="450px"}
