@@ -2,14 +2,16 @@
 layout: page
 group: "fairseq"
 title: "Convolutional Sequence to Sequence Learning"
-link_url: "https://arxiv.org/abs/1705.03122"    
+link_url: "https://arxiv.org/abs/1705.03122"
 ---
 
 페이스북(facebook)이 공개한 Convoutional Seq2Seq 모델.
 
-## Source Code
+## 자료
 
-- 코드는 [여기](https://github.com/facebookresearch/fairseq){:target="blank"}에서 구할 수 있다. (루아코드임)
+- 코드는 [여기](https://github.com/facebookresearch/fairseq){:target="blank"}에서 구할 수 있다. (torch 구현체로 루아 코드임)
+- 참고할만한 논문은 원 논문말고 이전에 나온 논문도 있다.
+    - [A Convolutional Encoder Model for NMT](https://arxiv.org/abs/1611.02344)
 
 ## Introduction
 
@@ -58,7 +60,7 @@ $$d_i = W_d h_i + b_d + g_i \qquad\qquad a_{ij} = \frac{\exp(d_i^Tz_j)}{\sum_{t=
     - 입력 문자열 : \\({\bf x} = (x\_1, ...,x\_m)\\)
     - 입력에 대한 Embedding 벡터 : \\({\bf w} = (w\_1, ...,w\_m)\\)
     - 입력에 대한 Position 벡터 : \\({\bf p} = (p\_1, ...,p\_m)\\)
-    - 실제 입력 벡터 : \\({\bf e} = (w\_1, p\_1, ...,w\_m, p\_m)\\)
+    - 실제 입력 벡터 : \\({\bf e} = (w\_1 + p\_1, ...,w\_m + p\_m)\\)
     - Decoder로부터 얻어지는 Feed-back 벡터 : \\({\bf g} = (g\_1, ...,g\_m)\\)
     - Encoder 출력 벡터 : \\({\bf z^l} = (z\_1^l, ...,z\_m^l)\\)
     - Decoder 출력 벡터 : \\({\bf h^l} = (h\_1^l, ...,h\_m^l)\\)
@@ -67,9 +69,53 @@ $$d_i = W_d h_i + b_d + g_i \qquad\qquad a_{ij} = \frac{\exp(d_i^Tz_j)}{\sum_{t=
 
 ![figure.1]({{ site.baseurl }}/images/{{ page.group }}/f01.png){:class="center-block" height="550px"}
 
-- Convolution
-    - 내맘대로 표기법. (논문의 표기가 좀 이상하다.)
-    - word embedding \\(e\_i^{(d)} = w\_i^{(d1)} + p\_i^{(d2)}\\). (단, \\(d=d1+d2\\))
-    - input block \\(b\_k^{(kd)} = \\{e\_1^{(d)},...,e\_k^{(d)}) \\}\\) 
-    - convolution 출력 \\(d\_k^1 = W^{(2d \times kd)} b\_k^{(kd)}\\)
+- Convolutions
+    - 내맘대로 표기법. (논문의 표기가 복잡하게 되어 있음)
+    - word embedding \\(e\_j^{(d)} = w\_j^{(d)} + p\_j^{(d)}\\).
+    - input block \\(X^{(kd)} = [ e\_{j}^{(d)},...,e\_{j+k-1}^{(d)} ]\\) 
+    - convolution 출력 \\(conv\_o^{(2d)} = W^{(2d \times kd)} X\_k^{(kd)}\\)
+    - 참고로 convolution을 구성할 때에는 문장의 양 끝에 \\(k-1\\) 갯수만큼 패딩을 추가한다.
+        - 이렇게하면 입력과 출력의 차원이 같아진다.)
+
+- GLU (Gated Linear Units)
+    - 공동 저자인 Dauphin이 제안한 모델. (이 [논문](https://michaelauli.github.io/papers/gcnn.pdf)을 참고하자.)
+    - CNN 을 이용한 Seq 모델에서 사용하는 gate 로 LSTM 내의 gate와 유사. (하지만 훨씬 간단하다.)
+        - 저자의 주장으로는 이런 간단한 모델로도 성능이 좋다고..
+
+$$v([A\;B]) = A\otimes \sigma(B)$$
+
+- 여기서 \\(A\\) 와 \\(B\\) 는 각각 d 차원의 크기를 가진다. ( \\(A, B \in {\mathbf R}^d\\) )
+- \\(\otimes\\) 는 point-wise 곱을 의미한다.
+- 따라서 \\(v\\) 또한 \\(v([A, B]) \in {\mathbf R}^d\\) 를 만족한다.
+    - 이전 연구에서 Oord 가 \\(tanh\\) 를 이용하여 이런 모델을 만들긴 했었다.
+    - Dauphin 은 이전 논문에서 \\(tanh\\) 보다 \\(\sigma\\) 가 언어 모델링 쪽에서는 더 성능이 좋다는 것을 보였다.
+
+- Deep한 모델을 설계할 때 Residual Connection을 사용하면 성능이 더 좋아진다.
+    - 따라서 여기서는 모든 Convolution 레이어마다 Residual connection을 추가한다.
+    - 이 말은 Convolution 층이 하나가 아니라 여러 층이라는 것.
+    - 마찬가지로 GLU도 각 층마다 추가한다.
+
+- 이제 Convolution에 대해 일반화된 식으로 다시 기술하면 다음과 같다.
+
+$$h_i^l = v(W^{l}\left[h_{i-k/2}^{l-1},...,h_{i+k/2}^{l-1}\right] + b_w^l) + h_i^{l-1}$$
+
+- 앞서 설명한대로 입력쪽의 경우 Encoder 출력의 크기가 입력과 동일하기 때문에 이런 방식의 구현에 문제가 없다.
+- 하지만 Decoder 의 출력 개수는 알수가 없다. (보통 RNN에서는 end-tag 혹은 max margin 값에 다다르면 종료)
+
+$$d_i^l = W_d^l h_i^l + b_d^l + g_i\qquad{(1)}$$
+
+$$a_{ij}^{l} = \frac{\exp(d_i^l \cdot z_j^{u})}{\sum_{t=0}^{m}\exp(d_i^l\cdot z_t^u)}$$
+
+$$c_i^l = \sum_{j=1}^{m} a_{ij}^{l}(z_j^u + e_j)\qquad{(2)}$$
+
+
+- 이제 지금까지 설명한 내용을 그림으로 보자.
+
+![figure.2]({{ site.baseurl }}/images/{{ page.group }}/f02.png){:class="center-block" height="550px"}
+
+- Decoder 가 Multi layer 구조인 경우엔 위의 그림만으로는 부족하다.
+- 아래 gif 이미지를 참고하자.
+
+![figure.3]({{ site.baseurl }}/images/{{ page.group }}/f03.gif){:class="center-block" height="550px"}
+
 
