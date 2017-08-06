@@ -133,3 +133,75 @@ $$\tilde{R} = {arg \max}_{ R \subseteq \Omega } \frac{ \tilde{f}_R^T {\bf q} }{ 
 $$L(I_q, I^{+}, I^{-}) = \max (0, m + q^Td^{-} - q^{T}d^{+})$$
 
 - `m` 은 margin 값을 의미하고 `+` 는 positive sample, `-` 는 negative sample을 의미한다.
+- Loss 함수가 유사 이미지를 찾는 형태로 정의되므로 당연히 성능이 올라갈 것이라는 것은 예상할만 일이지만,
+- 이 논문에서 품질 향상에 진짜 중요한 부분을 차지하는 것은 바로 학습 데이터 정제
+
+### 학습 데이터 정제 과정
+
+- 학습에 사용된 데이터는 Landmark 데이터. (이 [논문](https://arxiv.org/abs/1404.1777) 에서 사용된 데이터이다.)
+    - 약 214K 개의 데이터로 이루어져 있으며 672개의 명소로 이루어져있다.
+    - 검색엔진(아마도 구글) 등을 이용하여 수집한 데이터로 정제 과정을 많이 거치지는 못했다.
+- DeepIR 논문에서의 전처리.
+    - 제공된 URL 리스트 중 URL이 깨진 데이터는 더 이상 받을 수 없기에 이를 제외함.
+    - 이미지 개수가 작은 특정 class는 모두 제외 처리
+    - 심혈을 기울여 Oxford5k 와 Paris6k, Holiday 데이터 집합과 겹치는 데이터는 모두 제외.
+    - 최종적으로 192K 개의 데이터, 586개의 레이블을 얻을 수 있었다.
+
+![figure.8]({{ site.baseurl }}/images/{{ page.group }}/f08.png){:class="center-block" height="400px"}
+        
+- DeepIR 논문에서의 학습 데이터 정제 과정.
+    - 주어진 학습 데이터는 동일한 레이블일지라도 다른 그림인 경우가 있음.
+        - 분류 문제에서는 뭐 큰 상관 없지만 Instance 레벨의 유사 이미지 분류에서는 큰 문제.
+    - 예를 들어 '성 바울 성당' 이미지는 외부/내부 전경이 섞여있음.
+    - 이를 Instance 레벨로 그룹을 할 필요가 생김. (애초에 목표가 Instance Level의 유사 이미지 검색임)
+    - 그룹핑을 위한 이미지 매칭 작업에서 가장 먼저 수행한 것은 SIFT + Hessian-Affine keypoint detector.
+        - 이런 식으로 하나의 레이블에 여러 그룹이 생기는 경우 가장 많은 데이터를 보유한 그룹만을 남김.
+    - 최종적으로 49K 의 이미지만을 학습에 사용함. (training : 42,410, validation : 6382)
+     
+- **Bounding Box Estimation**
+
+- R-MAC 을 사용하는 방식에서는 특정 객체의 박스(Box)가 필요 없다.
+- 하지만 RPN 을 사용하려면 학습 집합에 반드시 동일 Object 는 동일한 Bounding Box를 가지고 있어야 한다.
+- 일단 데이터 전처리 과정으로 동일한 Object 에 대해 여러 이미지들을 확보한 상태이지만 Bounding Box는 존재하지 않는다.
+- 여기서는 자동으로 Bounding Box 를 생성하는 법을 다룬다.
+- 일단 Keypoint Matching 방법을 통해 (Grouping시 사용되는 기법) 대략적인 Boxing 은 가능하다.
+    - 하지만 정확도를 위해 동일 그룹 내 각 이미지마다 비슷한 Object가 비슷한 형태로 Boxing 되어야 한다.
+- 이를 위해 Boxing 을 후처리로 보정하는 기능을 추가함.
+
+![figure.9]({{ site.baseurl }}/images/{{ page.group }}/f09.png){:class="center-block" height="500px"}
+
+### DeepIR 실험 결과
+
+- 어쨌거나 유사 이미지 검색에서 가장 좋은 품질을 보임.
+- 실제 구현체는 Caffe로 되어 있는 것을 구할 수 있다.
+    - 그런데 코드를 약간 수정해서 재컴파일하여 사용해야 함.
+
+![figure.10]({{ site.baseurl }}/images/{{ page.group }}/f10.png){:class="center-block" height="800px"}
+
+- 고민해 볼 만한 점
+    - 학습 데이터는 보통 건물 등인데 이런 스타일이 아닌 Object 가 두드러지는 예제들 (예를 들면 물건 등)에서는 품질이 어느정도 될까?
+    
+- 2017년 5월에 개선판이 arxiv에 올라옴. ([링크](https://arxiv.org/pdf/1610.07940.pdf))
+    - VGG16 대신 ResNet 을 쓰면 성능이 더 올라간다. (ResNet101)
+    - 게다가 ResNet을 쓰면 힘들게 RPN을 할 필요 없이 R-MAC만으로 충분하다. (성능 향상의 효과가 없음)
+    - 이미지의 여러 Resolution 을 사용하여 학습하면 성능이 올라간다. (Query와 학습 집합 둘 다에 대해 각각 테스트)
+        - Query와 Dataset 모두에 Multi Resolution을 사용하면 성능이 올라감.
+    - 최종 이미지를 압축해서 사용하는 방식도 실험해 봄. (PQ가 가장 좋음)
+    
+![figure.11]({{ site.baseurl }}/images/{{ page.group }}/f11.png){:class="center-block" height="600px"}
+
+- (참고)
+    - 최근 Postect [한보형](http://cvlab.postech.ac.kr/~bhhan/) 교수님 랩에서 이 성능을 넘는다는 유사 이미지 검색 관련 논문을 발표.
+        - [Large-Scala Image Retrieval with Attentive Deep Local Features](https://arxiv.org/pdf/1612.06321.pdf)
+
+## Semantic-DeepIR
+
+- 지금까지는 Instance 레벨의 이미지 검색에만 중점을 두고 있었음.
+- 하지만 이미지의 부가 정보를 활용하면 이미지 검색을 더욱 풍성하게 만들 수 있음.
+    - 하지만 자연스럽게 Deep Learning 으로 한번에 이걸 다 해보고 싶다.
+- 이 논문에서는 좀 더 복잡한 형태의 이미지(예를 들어 Object가 다수 등장하는 이미지)에서 좀 더 정확한 이미지 검색을 수행할 수 있는 방법을 다룬다.
+
+- 사실 이 그림만 봐도 대략적인 방법을 이해할 수 있다.
+
+![figure.12]({{ site.baseurl }}/images/{{ page.group }}/f12.png){:class="center-block" height="600px"}
+
