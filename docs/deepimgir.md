@@ -205,3 +205,94 @@ $$L(I_q, I^{+}, I^{-}) = \max (0, m + q^Td^{-} - q^{T}d^{+})$$
 
 ![figure.12]({{ site.baseurl }}/images/{{ page.group }}/f12.png){:class="center-block" height="600px"}
 
+### Dataset
+
+- ImageNet 등으로 학습된 결과로 얻어지는 유사 이미지의 결과를 일반 사용자에게 제시했을 때 별로 좋은 소리를 못들음. (복잡한 이미지의 경우)
+- 이 말은 Semantic 유사성을 가지는 이미지를 얻어내기 위한 다른 방안이 필요하다는 이야기.
+- 일단 이를 위한 학습 데이터를 어떻게 모으는지를 논의해보자.
+- 사실 재료가 될만한 데이터는 좀 있기는 하다.
+    - MS-COCO (이미지 뿐만 아니라 caption 데이터도 포함)
+    - VQA 데이터
+    - [Visual Genome](http://visualgenome.org/){:target="_blank"} 데이터 (108k 크기인데다가 caption도 포함)
+        - 이게 참 어려운 데이터이다. ( [관련 논문](http://visualgenome.org/static/paper/Visual_Genome.pdf){:target="_blank"} )
+    
+- 현실적으로 Semantic Image 를 위한 학습용 데이터를 구축하기란 쉬운 일이 아니다.
+    - 복잡한데다가 시간이 엄청나게 소요된다.
+- 그래서 좀 더 쉬운 방향으로 접근하기로 함. (Triplet 데이터)
+    - 3 개의 이미지를 사용자에게 제시하고 이 중 더 가까운 이미지를 고르게 한다.
+        - 주어진 쿼리 이미지에 대해 동일한 카테고리 이미지 하나와 무작위 추출 이미지 하나로 구성된 Tuple.
+        - 이를 35명의 연구자가 평가함. (남자 22, 여자 13명) 데이터는 약 3,000개의 triplet을 구성함.
+        - 추가로 50 개의 triplet을 표준 집합으로 정의하고 25명으부터 평가를 얻음. 
+    - 이 때 '더 유사하다' 라는 의미를 애매하게 사용하지 않고 구체적으로 명시해서 최대한 bias가 없도록 한다.
+- 랭킹 평가를 위해서 추가 작업을 진행
+    - 적당한 평가 지표를 만들어 사용자들이 평가한 것을 다른 사람과 비교해 볼 수 있도록 평가 지표를 만듬. (합의 스코어)
+    - leave-one-out 이라는 방식이라고 함.
+    - 순위 질문을 이용해서 사용자가 평가를 내리면 이와 동일한 평가를 한 다른 사용자의 비율로 측정
+    - 자세한 방법은 생략하고 어쨌거나 도출된 합의 평가 스코어 (agreement score) 는 89.1 (표준편차는 4.6)
+        - 대충 의미하자면 두 이미지 사이의 유사도를 약 89% 정도는 같다고 생각한다는 것.
+
+![figure.13]({{ site.baseurl }}/images/{{ page.group }}/f13.png){:class="center-block" height="300px"}
+
+- 이제 Base 결과를 확인해보고 시작하자.
+    - 사람이 내린 평가는 89% 정도라고 앞서 이야기했고,
+    - 이전 논문에서 사용한 ResNet + R-MAC 성능이 약 64% 정도이다. (이는 랜덤 결과인 50% 보단 높다)
+        - 이로부터 0% 부터 시작이 아니라 50% 부터 성능 지표의 시작 임을 감안해야 한다.
+- Human captions 영역
+    - Semantic 정보에 대한 이미지 유사도를 비교하기 위한 Base Line으로 활용된다.
+    - Visual Genome 데이터에는 각 object별로 특정 단어들이 기술되어 있다. (Visual Genome 사이트를 방문해보자)
+        - 이 단어를 WordNet synset(동의어)에 매칭하여 이미지를 기술한다.
+        - 이로부터 이미지에 대한 히스토그램을 만들게 됨. (synset에 등장하는 단어별로 count한 뒤 tf-idf 및 l2 정규화를 진행)
+        - 두 이미지에 대해 dot product를 수행하여 유사도를 비교하게 된다.
+    - 이런 방식으로 semantic 유사도를 평가하게 된다.
+- 자세한 내용은 시간이 없으므로 생략하자. (논문을 참고하자)
+
+### Visual Embedding
+
+- Visual 정보에 대한 표현(representation)은 앞서 이야기한 대로 RetNet101 + R-MAC 을 사용한다.
+    - Semantic 유사성에 대한 학습은 End-to-End 방식으로 학습하게 된다.
+- 별로 어려운게 없으니 그냥 바로 Loss를 보자면,
+
+$$L = \sum_q \sum_{d^+,d^-} L_v(q, d^+, d^-)$$
+
+$$L_v(q, d^+, d^-) = \frac{1}{2}\max\left( 0, m-\phi_q^T\phi_+ + \phi_q^T\phi_-  \right)\qquad{(1)}$$
+
+- 단, \\(\phi(q)=\phi\_q\\), \\(\phi(d^+)=\phi\_+\\), \\(\phi(d^-)=\phi\_-\\)
+- \\(\phi : I \rightarrow R^D\\)
+
+- 여기서 \\(\phi\\) 자체는 이미지 representation 이다.
+- 하지만 두 이미지간의 semantic 유사성을 확인하는 방법은 (즉, \\(+\\)와 \\(-\\)는) tf-idf를 활용하여 선정하게 된다.
+- 이런 방식으로 이미지 representation을 semantic embedding 공간에 사상하는 형태로 구성하게 된다.
+    - Word2Vec 방식을 한번 생각해보자.
+
+### Joint Visual & Text Embeding
+
+- 앞서 사용한 방식은 단순히 Text 정보로 Loss 를 구성하는 것이나 마찬가지.
+- 하지만 visual representation 과 text semantic 정보를 적절히 혼용한 방법은 존재하지 않는 것일까?
+    - 왜 없겠나. 두 정보를 적절하게 섞은 Loss를 만들면 되지.
+    
+
+$$L_{t1}(q, d^+, d^-) = \frac{1}{2}\max\left( 0, m - \phi_q^T\theta_+ + \phi_q^T\theta_-  \right)\qquad{(2)}$$
+
+$$L_{t2}(q, d^+, d^-) = \frac{1}{2}\max\left( 0, m - \theta_q^T\phi_+ + \theta_q^T\phi_-  \right)\qquad{(3)}$$
+    
+- 단, \\(\phi : I \rightarrow R^D\\) , \\(\theta : T \rightarrow R^D\\)
+- \\(\theta\\) 의 경우 Embeding 크기를 맞추기 위해 \\(\frac{W^{T} {\bf t}}{\\|W^{T} {\bf t}\\|\_2}\\) 를 사용한다. (\\(t\\) 가 그 역할을 수행)
+
+### 실험
+
+- 이미지 크기를 W/H 중 긴쪽이 576이 되도록 resizing.
+- 2 Layer의 R-MAC 적용
+- tf-idf를 활용한 caption encoding (NLTK를 활용해서 word stemming 과정을 거침)
+- 64 batch (triplet)
+- ADAM optimizer를 사용하고 lr은 \\(10^-5\\) 에서 8k 반복 후 \\(10^-6)으로 줄임
+
+- 측정지표
+    - NDCG (Normalized discounted cumulative gain)
+    - PCC (Pearson's correlation coefficient)
+
+
+![figure.14]({{ site.baseurl }}/images/{{ page.group }}/f14.png){:class="center-block" height="300px"}
+
+![figure.15]({{ site.baseurl }}/images/{{ page.group }}/f15.png){:class="center-block" height="600px"}
+
+![figure.16]({{ site.baseurl }}/images/{{ page.group }}/f16.png){:class="center-block" height="600px"}
