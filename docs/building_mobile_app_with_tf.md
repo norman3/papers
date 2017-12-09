@@ -9,10 +9,11 @@ link_url: http://www.oreilly.com/data/free/building-mobile-applications-with-ten
 
 ## 개론
 
-- TensorFlow를 모바일에서도 사용 가능하다고 이야기는 아주 간단한 책자이다.
+- TensorFlow를 모바일에서 구동시킬 수 있는 방법을 이야기하고 있는 아주 간단한 책자이다.
 - 하지만 Mobile 위주보다는 TensorFlow를 어떻게 Application에 탑재하는지를 살펴보도록 하자.
 - 참고로 TensorFlow-Lite 가 나오기 이전에 출판된 책이다.
     - 이 부분은 뒤에 조금 더 언급하도록 하자.
+- 참고로 초반부에 각 OS별 컴파일 방법은 공식 [README.md](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/makefile/README.md){:target="_blank"} 문서가 더 잘 정리되어 있다.
 
 ### 모바일 환경에 적합한 TensorFlow 활용처.
 
@@ -54,6 +55,17 @@ dependencies {
 - 책에는 Android Studio에서 Bazel을 이용한 TensorFlow Build 코드가 포함되어 있다.
     - 우리에게는 별로 중요한 내용은 아니니 넘기도록 하자.
     - 이미 TensorFlow 매뉴얼에 추가되어 있다.
+
+- 추가로 cross-complie 로 생성하는 것도 그리 어렵지 않다.
+
+```sh
+$ tensorflow/contrib/makefile/download_dependencies.sh
+$ tensorflow/contrib/makefile/compile_android_protobuf.sh -c
+$ export HOST_NSYNC_LIB=`tensorflow/contrib/makefile/compile_nsync.sh`
+$ export TARGET_NSYNC_LIB=`CC_PREFIX="${CC_PREFIX}" NDK_ROOT="${NDK_ROOT}" tensorflow/contrib/makefile/compile_nsync.sh -t android -a armeabi-v7a`
+$ make -f tensorflow/contrib/makefile/Makefile TARGET=ANDROID
+```
+    
 - Android는 Java 베이스이고 Java 환경에서 어떻게 TensorFlow로 Inferece를 하는지 궁금할 수 있겠다.
     - 그런 경우 [이 코드](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/android/java/org/tensorflow/contrib/android/TensorFlowInferenceInterface.java)를 살펴보자. Java에서 TensorFlow를 사용하는 예제 코드이다.
     - 당근 Inference만 들어있다.
@@ -213,4 +225,19 @@ class RegisterMul {
   }
 };
 RegisterMul g_register_mul;
+```
+
+- - -
+
+# 실습
+
+```
+$ ./tensorflow/contrib/makefile/download_dependencies.sh
+$ apt-get install install -y autoconf automake libtool 
+$  cd tensorflow/contrib/makefile/downloads/protobuf/
+$ ./autogen.sh
+$ ./configure
+$ make
+$ sudo make install
+$ sudo ldconfig # refresh
 ```
