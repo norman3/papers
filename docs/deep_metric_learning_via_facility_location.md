@@ -47,6 +47,7 @@ $$J = \frac{3}{2m}\sum_{i}^{\frac{m}{3}} \left[ D_{ia,ip}^{2} - D_{ia,in}^{2} + 
 
 - 여기서 \\(D\_{ia,jp} = \|\|\;f({\bf x}\_{i}^{a}) - f({\bf x}\_{i}^{p})\;\|\|\\) 이고 \\(D\_{ia,jn} = \|\|\;f({\bf x}\_{i}^{a}) - f({\bf x}\_{i}^{n})\;\|\|\\) 이다.
 - \\([\cdot]\_{+}\\) 는 Hinge Loss 함수를 의미한다. 즉, \\(\max(0, \cdot)\\) 과 동일한 의미가 된다.
+    - Hinge Loss 를 사용한다는 것이 중요하다 !!! (MSE 등은 왜 안될까!!!)
 
 ![figure.2]({{ site.baseurl }}/images/{{ page.group }}/f02.png){:class="center-block" height="150px"}
 
@@ -113,7 +114,7 @@ $${\widehat J}_{i,j} = \log \left( \sum_{(i,k) \in N}{\exp{\left(\alpha-D_{i,k}\
 
 - Loss 함수는 다음과 같다.
 
-$$L(\{x,x^+,\{x_i\}_{i=1}^{N-1}  \};f) = \log\left( 1 + \sum_{i=1}^{N-1}{\exp(f^{T}f_i - f^Tf^+)}\right)$$
+$$L(\{x,x^+,\{x_i\}_{i=1}^{N-1}\};f) = \log\left( 1 + \sum_{i=1}^{N-1}{\exp(f^{T}f_i - f^Tf^+)}\right)$$
 
 - 이 때 \\(f(\cdot)\\) 은 CNN 을 통과하여 얻은 feature 값이다. (논문에서는 Embedding Kernel 이라 표현)
 - \\(\log(\cdot)\\) 항은 다음과 같이 풀어서 작성할 수 있다.
@@ -133,8 +134,23 @@ $$\log\left( 1 + \sum_{i=1}^{N-1}{\exp(f^{T}f_i - f^Tf^+)}\right) = -\log{\frac{
 
 ## Facility Location
 
-- 기존에 사용되던 Loss 들은 Mini-Batch 안에서의 Pairs/Triplets 로 정의되어 있음.
+- 기존에 사용되던 Metric Loss 들은 Mini-Batch 안에서의 Pairs/Triplets 로 정의되어 있음.
 - 따라서 Global Structure 에 대한 정보는 고려되지 못함.
-- 데이터 준비 과정도 매우 힘들다. (학습셋 구축이 가장 어려운 일이다.)
+- 게다가 데이터 준비 과정도 매우 힘들다. (학습셋 구축이 가장 어려운 일이다.)
 - 본 연구에서는 Clustering Quality Metric (NMI)로 바로 최적화 시키는 기법을 적용함.
+
+![figure.8]({{ site.baseurl }}/images/{{ page.group }}/f08.png){:class="center-block" height="400px"}
+
+- 위 그림은 앞서 사용된 Loss 방식으로도 해결이 되지 않는 카운터 예제이다.
+- 여기서 파란색 선은 positive pair 이고 붉은 색 선은 negative pair 를 의미한다.
+- 이 경우 동일한 클래스에 속한 positive pair (여기서는 보라색 점)에 척력(repulsion)이 작용됨.
+- local metric 방식의 한계를 보여줌. (진짜인가?)
+
+![figure.9]({{ site.baseurl }}/images/{{ page.group }}/f09.png){:class="center-block" height="450px"}
+
+- Facility Location 방법을 대략적으로 나타낸 그림.
+- 여기서 파란색 선은 positive pair, 볼드(bold) 표시된 노드는 medoids 이다.
+- 서로 다른 클래스는 클러스터 단위로 척력이 적용된다.
+
+### Facility location 문제 정의
 
