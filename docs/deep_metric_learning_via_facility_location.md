@@ -196,12 +196,14 @@ $$\ell (X, {\bf y}^*) = \left[ \max_{ S \subset V,\; |S|=|\mathcal{Y}| } \left\{
         - 예를 들어 실제 클래스가 5개이면 사용가능한 medoid 개수는 정확히 5개라는 뜻이다.
         - 결국 레이블 수와 같은 크기의 mediod를 가지도록 최적의 클러스터링을 구성하게 된다.
         - 이 때 원래의 클래스 값은 고려되지 않는다는 것이 중요하다.
-- 통상적으로 정답 클래스를 고려하지 않는 Facility Score 점수는 정답 클래스를 고려하는 Oracle Score 보다 더 좋다.
+- 통상적으로 학습 초기에는 정답 클래스를 고려하지 않는 Facility Score 점수가 정답 클래스를 고려하는 Oracle Score 보다 더 좋다.
     - 이 경우 (Margin은 잠시 잊고 Score Function의 출력 부호를 고려하면) Loss는 0보다 큰 값이 만들어진다.
-    - 결국 이 둘 사이의 차이를 없애야 하고 파라미터를 조절하여 Oracle Score를 클러스터링 Score와 같아질수 있도록 학습하게 된다.
-- (참고) Oracle Score는 단 한번만 만들어내는 것이 아니다. (즉, 고정값이 아니다.)
-    - 학습을 진행하면 파라미터 \\( \Theta \\) 가 갱신되게 되므로 이것도 Iteration 마다 계산되어야 한다.
-    - 당연한 이야기인데 혹시 혼동이 될까봐 명시적으로 적어놓는다.
+    - 결국 이 둘 사이의 차이를 없애야 하고 파라미터를 조절하여 Oracle Score가 클러스터링 Score 보다 좋아지도록 학습해야 한다.
+        - 당연히 Oracle Score는 단 한번만 만들어내는 것이 아니다. (즉, 고정값이 아니다.)
+        - 학습을 진행하면 파라미터 \\( \Theta \\) 가 갱신되게 되므로 이것도 Iteration 마다 계산되어야 한다.
+
+- 결국 식(6)은 Oracle score \\(\tilde{F}\\) 가 cluster score \\(F\\) 보다 커지도록 \\(f(\cdot;\Theta)\\) 가 학습된다는 의미이다.
+- 그림 (1) 이 이를 나타낸 것이다.
 
 - - -
 
@@ -211,8 +213,13 @@ $$\ell (X, {\bf y}^*) = \left[ \max_{ S \subset V,\; |S|=|\mathcal{Y}| } \left\{
 
 $$g(S)[i] = {\arg\min}_{j} \| f(X_i;\Theta) - f(X_{j|j \in S};\Theta)\|\qquad{(7)}$$
 
-- 직관적으로 보면 식(6)을 통해 결국은 Oracle score \\(\tilde{F}\\) 가 cluster score \\(F\\) 보다 커지도록 \\(f(\cdot;\Theta)\\) 를 학습하게 된다는 것이다.
-- 이 때 cluster 
+- Margin Term 은 클러스터링 품질을 측정하는 것이다.
+- 만약 term 이 0 인 경우 두개의 값이 동일한 것이고, 1인 경우 최악의 경우를 의미하게 된다.
+
+
+
+
+
 
 $$\Delta({\bf y}, {\bf y}^*) = 1 - NMI({\bf y}, {\bf y}^*)\qquad{(8)}$$
 
