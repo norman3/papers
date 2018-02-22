@@ -139,18 +139,97 @@ $$\log\left( 1 + \sum_{i=1}^{N-1}{\exp(f^{T}f_i - f^Tf^+)}\right) = -\log{\frac{
 - 게다가 데이터 준비 과정도 매우 힘들다. (학습셋 구축이 가장 어려운 일이다.)
 - 본 연구에서는 Clustering Quality Metric (NMI)로 바로 최적화 시키는 기법을 적용함.
 
-![figure.8]({{ site.baseurl }}/images/{{ page.group }}/f08.png){:class="center-block" height="400px"}
+![figure.8]({{ site.baseurl }}/images/{{ page.group }}/f08.png){:class="center-block" height="150px"}
 
 - 위 그림은 앞서 사용된 Loss 방식으로도 해결이 되지 않는 카운터 예제이다.
 - 여기서 파란색 선은 positive pair 이고 붉은 색 선은 negative pair 를 의미한다.
 - 이 경우 동일한 클래스에 속한 positive pair (여기서는 보라색 점)에 척력(repulsion)이 작용됨.
-- local metric 방식의 한계를 보여줌. (진짜인가?)
 
-![figure.9]({{ site.baseurl }}/images/{{ page.group }}/f09.png){:class="center-block" height="450px"}
+![figure.9]({{ site.baseurl }}/images/{{ page.group }}/f09.png){:class="center-block" height="250px"}
 
 - Facility Location 방법을 대략적으로 나타낸 그림.
-- 여기서 파란색 선은 positive pair, 볼드(bold) 표시된 노드는 medoids 이다.
+- 여기서 파란색 선은 positive pair, 볼드(bold) 표시된 노드는 [medoid](https://en.wikipedia.org/wiki/Medoid){:target="_blank"} 이다.
 - 서로 다른 클래스는 클러스터 단위로 척력이 적용된다.
 
-### Facility location 문제 정의
+### Facility location problem
+
+
+- 입력 데이터 (\\(i\\) 는 샘플 인덱스): \\(X_i\\)
+- 이에 대한 Embedding 함수 결과 (출력은 \\(K\\) 차원) : \\(f(X_i;\Theta)\\)
+- 랜드마크(Landmark) 집합 \\(S\\)
+    - \\(S \subseteq V\\) 이고 \\(V\\)는 \\(V = \\{1,...\|X\|\\}\\)
+    - 즉, S 는 샘플 갯수 N 이하의 정수로만 이루어진 집합의 부분 집합.
+
+- Facility location function 정의
+
+$$F(X, S;\Theta) = - \sum_{i \in |X|} { \min_{j \in S} \| f(X_i;\Theta) - f(X_j;\Theta) \| }\qquad{(4)}$$
+
+- Facility Location 함수는 어떤 score를 생성하는 함수이다.
+- \\(S\\) 는 어쨌거나 일단 정해져 있어야 한다. (이 함수의 입력 파라미터이다.)
+- 모든 샘플에 대해서 \\(S\\) 에 속한 값을 인덱스로 가지는 샘플들과의 거리를 계산한 뒤 최소 거리를 가지는 값만을 누적한다.
+- 최종 결과는 (\\(-\\)) 부호로 인해 음수 값이다. (따라서 이후에 이 값을 최대로 만드는 식을 설계할 것이다.)
+- 이 식의 의도를 쉽게 알 수 있는데 가장 적합한 집합 \\(S\\), 즉 좋은 medoid 집합을 선정하는 문제로 전개해 나갈 것이다.
+    - 결국 \\(S\\) 인덱스를 가지는 데이터 집합이 클러스터를 대표하는 medoid 가 된다는 것이다.
+- 사실 가장 좋은 집합 \\(S\\) 를 구하는 문제는 NP-hard 문제이다.
+    - 물론 최악의 경우 그렇다는 것이고 통상적으로 Greedy 솔루션이 존재한다.
+
+- 이제 새로운 함수를 정의한다. 이를 오라클(oracle) 함수라고 정의한다.
+
+$$\tilde{F} (X, {\bf y}^*; \Theta) = \sum_{k}^{ | \mathcal{Y} | }{\max_{j \in \{i: {\bf y}^*[i]=k\} }{F\left(X_{\{i: {\bf y}^*[i]=k\}}, \{j\}; \Theta\right)}} \qquad{(5)}$$
+
+- \\(V\\) 집합 원소 중 샘플이 특정 클래스 \\(k\\) 에 속하는 경우의 해당 샘플 인덱스 집합을 \\( \\{i;{\bf y}^*[i]=k \\}\\) 와 같이 표기한다.
+- 수식이 혼동이 좀 될수 있는데 위 식이 하고자 하는 것은 비교적 간단하다.
+    - 일단 특정 클래스에 속한 데이터 내에서 최적의 medoid 를 선정하는 것을 목표로 한다.
+    - 따라서 클래스마다 1개의 medoid를 찾게 된다.
+    - 이 작업을 최종적으로 모든 클래스에 대해 수행하게 된다. 결과는 클래스 독립적이다.
+    - 최종적으로 얻어지는 것은 score 값이다.
+    
+### Loss function
+
+- Loss 함수를 살펴보자.
+
+$$\ell (X, {\bf y}^*) = \left[ \max_{ S \subset V,\; |S|=|\mathcal{Y}| } \left\{ F(X, S;\Theta ) + \gamma \Delta(g(S), {\bf y}^*) \right\} - \tilde{F}(X, {\bf y}^*; \Theta) \right]_{+}\qquad{(6)}$$
+
+- 일단 수식 \\(\gamma \Delta(g(S), {\bf y}^*)\\) 는 Margin 값이므로 나중에 고민해보자.
+- 앞서 등장한 Facility Location은 전체 데이터를 대상으로 얻어진 점수이다.
+    - 이 때 원래의 클래스 수와 동일한 medoid 개수라는 제한을 준 상태에서 최적의 \\(F\\) 값을 구하게 된다.
+        - 예를 들어 실제 클래스가 5개이면 사용가능한 medoid 개수는 정확히 5개라는 뜻이다.
+        - 결국 레이블 수와 같은 크기의 mediod를 가지도록 최적의 클러스터링을 구성하게 된다.
+        - 이 때 원래의 클래스 값은 고려되지 않는다는 것이 중요하다.
+- 통상적으로 정답 클래스를 고려하지 않는 Facility Score 점수는 정답 클래스를 고려하는 Oracle Score 보다 더 좋다.
+    - 이 경우 (Margin은 잠시 잊고 Score Function의 출력 부호를 고려하면) Loss는 0보다 큰 값이 만들어진다.
+    - 결국 이 둘 사이의 차이를 없애야 하고 파라미터를 조절하여 Oracle Score를 클러스터링 Score와 같아질수 있도록 학습하게 된다.
+- (참고) Oracle Score는 단 한번만 만들어내는 것이 아니다. (즉, 고정값이 아니다.)
+    - 학습을 진행하면 파라미터 \\( \Theta \\) 가 갱신되게 되므로 이것도 Iteration 마다 계산되어야 한다.
+    - 당연한 이야기인데 혹시 혼동이 될까봐 명시적으로 적어놓는다.
+
+- - -
+
+- 이제 Margin \\(\gamma \Delta(g(S), {\bf y}^*)\\)를 고민해보자.
+    - 먼저 구조화된 Margin 함수 \\(\Delta({\bf y}, {\bf y}^*)\\) 를 정의한다.
+    - 이 때 \\(\{\bf y\}\\) 는 \\(y = g(S)\\) 를 사용하게 된다.
+
+$$g(S)[i] = {\arg\min}_{j} \| f(X_i;\Theta) - f(X_{j|j \in S};\Theta)\|\qquad{(7)}$$
+
+- 직관적으로 보면 식(6)을 통해 결국은 Oracle score \\(\tilde{F}\\) 가 cluster score \\(F\\) 보다 커지도록 \\(f(\cdot;\Theta)\\) 를 학습하게 된다는 것이다.
+- 이 때 cluster 
+
+$$\Delta({\bf y}, {\bf y}^*) = 1 - NMI({\bf y}, {\bf y}^*)\qquad{(8)}$$
+
+
+$$NMI(({\bf y}_1, {\bf y}_2) = \frac{MI({\bf y}_1,{\bf y}_2)}{\sqrt{H({\bf y}_1)H({\bf y}_2)}}\qquad{(9)}$$
+
+
+$$P(i) = \frac{1}{m} \sum_j \mathrm{I}[{\bf y}[j] == i] \qquad{(10)}$$
+
+$$P(i, j) = \frac{1}{m} \sum_{k,l} \mathrm{I}[{\bf y}_1[k] == i]\cdot \mathrm{I}[{\bf y}_2[l]==j]\qquad{(10)}$$
+
+
+$$\partial \ell(X, {\bf y}^*) = \mathrm{I}[\ell(X, {\bf y}^*)>0]\left(\nabla_{\Theta}F(X, S_{PAM};\Theta) - \nabla_{\Theta}\tilde{F}(X, {\bf y}^*;\Theta)  \right)\qquad{(11)}$$
+
+$$\nabla_{\Theta}F(X, S;\Theta) = - \sum_{i \in |X|} \left[ \frac{f(X_i;\Theta)-f(X_{j*(i)};\Theta)}{\| f(X_i;\Theta)-f(X_{j*(i)};\Theta) \|} \cdot \nabla_{\Theta}\left(f(X_i;\Theta)-f(X_{j*(i)};\Theta)\right)\right]\qquad{(12)}$$
+
+$$\nabla_{\Theta}\tilde{F}(X, {\bf y}_i^*;\Theta) = \sum_k \nabla_{\Theta}F\left(X_{i:{\bf y}^*[i]=k},\{j^*(k)\};\Theta\right)\qquad{(13)}$$
+
+
 
