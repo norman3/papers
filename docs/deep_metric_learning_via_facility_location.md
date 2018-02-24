@@ -214,29 +214,71 @@ $$\ell (X, {\bf y}^*) = \left[ \max_{ S \subset V,\; |S|=|\mathcal{Y}| } \left\{
 $$g(S)[i] = {\arg\min}_{j} \| f(X_i;\Theta) - f(X_{j|j \in S};\Theta)\|\qquad{(7)}$$
 
 - Margin Term 은 클러스터링 품질을 측정하는 것이다.
-- 만약 term 이 0 인 경우 두개의 값이 동일한 것이고, 1인 경우 최악의 경우를 의미하게 된다.
-
-
-
-
-
+    - \\(y\\) 와 \\(y^*\\) 가 일치하는 경우 이 값은 0이 된다.
+    - 그리고 1인 경우 최악의 경우를 의미한다. (서로 아무런 상관없이 값이 발현)
+- 식은 다음과 같다.
 
 $$\Delta({\bf y}, {\bf y}^*) = 1 - NMI({\bf y}, {\bf y}^*)\qquad{(8)}$$
 
+(참고)
+
+- Mutual Information 은 다음과 같이 정의된다.
+
+$$MI[{\bf x}, {\bf y}] \equiv KL(p({\bf x}, {\bf y})||p({\bf x})p({\bf y})) = - \iint p({\bf x}, {\bf y})\ln\left(\dfrac{p({\bf x})p({\bf y})}{p({\bf x}, {\bf y})}\right)d{\bf x}d{\bf y}$$
+
+- NMI (Normalized Mutual Information)
 
 $$NMI(({\bf y}_1, {\bf y}_2) = \frac{MI({\bf y}_1,{\bf y}_2)}{\sqrt{H({\bf y}_1)H({\bf y}_2)}}\qquad{(9)}$$
 
+- NMI는 피어슨 상관 계수와 비슷한 형식으로 두 확룔 함수가 완전하게 독립이면 0 을 갖게 된다.
+    - 반대로 완전한 상관성을 가지게 되면 1을 갖게 된다.
+
+- 여기서 확률 값을 계산하는 방법은 (이산값이므로) 다음의 방식을 사용한다.
 
 $$P(i) = \frac{1}{m} \sum_j \mathrm{I}[{\bf y}[j] == i] \qquad{(10)}$$
 
 $$P(i, j) = \frac{1}{m} \sum_{k,l} \mathrm{I}[{\bf y}_1[k] == i]\cdot \mathrm{I}[{\bf y}_2[l]==j]\qquad{(10)}$$
 
+### Backpropagation subgradient
+
+- 앞서 정의한 Loss 함수를 사용하기 위해서는 파라미터로 미분한 식이 필요하다.
+- 적절히 전개하면 가능하다고 한다.
 
 $$\partial \ell(X, {\bf y}^*) = \mathrm{I}[\ell(X, {\bf y}^*)>0]\left(\nabla_{\Theta}F(X, S_{PAM};\Theta) - \nabla_{\Theta}\tilde{F}(X, {\bf y}^*;\Theta)  \right)\qquad{(11)}$$
+
+- 여기서 \\(S\_{PAM}\\) 은 식(6) 부분에서 앞쪽 영역의 식을 의미하는 것이다.
+    - 이 부분은 3.4 절을 참고하자.
+
+- 전개식은 다음과 같다.
 
 $$\nabla_{\Theta}F(X, S;\Theta) = - \sum_{i \in |X|} \left[ \frac{f(X_i;\Theta)-f(X_{j*(i)};\Theta)}{\| f(X_i;\Theta)-f(X_{j*(i)};\Theta) \|} \cdot \nabla_{\Theta}\left(f(X_i;\Theta)-f(X_{j*(i)};\Theta)\right)\right]\qquad{(12)}$$
 
 $$\nabla_{\Theta}\tilde{F}(X, {\bf y}_i^*;\Theta) = \sum_k \nabla_{\Theta}F\left(X_{i:{\bf y}^*[i]=k},\{j^*(k)\};\Theta\right)\qquad{(13)}$$
 
+### Loss augmented inference
 
+## Implementation details
 
+- 구현체가 이미 TensorFlow contrib 에 포함되어 있다. ([참고링크](https://www.tensorflow.org/versions/master/api_docs/python/tf/contrib/losses/metric_learning/cluster_loss){:target="_blank"})
+
+- 환경
+    - Inception (w/ batch norm) (Pretrained Model ILSVRC2012)
+    - Random Crop, Single Center Crop
+    - N-Pair
+        - Multiple Random Crop (Avg. Embeding Vector)
+    - Embedding Size :64 (다른 논문과의 비교를 위해)
+    - RMSProp
+- 논문에서 언급했듯 정제된 학습셋이 필요하지는 않다. (Triplet 같은 데이터가 필요 없음)
+- 대신 배치 크기 \\(m\\) 만큼의 샘플을 랜덤하게 뽑아 쓴다.
+- 이러한 이유로 다음과 같은 범위로 학습 데이터가 구성될 수도 있다.
+    - 배치 내 모든 샘플이 동일 클래스 : 이 경우 하나의 클러스터가 생성
+    - 배치 내 모든 샘플이 모두 다 다른 클래스 : 이 경우 각자의 샘플이 모두 개별 클러스터
+- 제약을 두어 학습이 잘 되도록 한다. 배치 내에 포함되는 Unique 클래스의 갯수를 \\(C\\) 라 정의한다.
+- 그런 다음 \\(\frac{C}/m=\\{0.25, 0.50, 0.75\\}\\) 로 배치 샘플을 구성해서 테스트를 수행하였다.
+
+- 한 클래스에서 데이터가 많이 뽑힐 수 있기 때문에 다음과 같은 조건을 둔다.
+    - 클래스가 \\(C\\) 개라고 하면 \\(\frac{C}{m}=\\{0.25, 0.50, 0.75\\}\\) 
+    - 최종적으로 실험 데이터마다 적합한 비율을 선정하여 사용하였다.
+        - CUB-200-2011, Cars196 : \\(\frac{C}{m}=0.25\\)
+        - Stanford Online Products : \\(\frac{C}{m}=0.75\\)
+    
