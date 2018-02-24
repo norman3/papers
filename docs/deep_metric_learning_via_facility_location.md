@@ -97,11 +97,11 @@ $${\widehat J}_{i,j} = \log \left( \sum_{(i,k) \in N}{\exp{\left(\alpha-D_{i,k}\
     - 적당히 Batch 데이터 안에 포함하도록 구성한다.
     - 이후 Batch 내부에서 positive pair 에 포함된 각각의 샘플에 대해 hard negative 샘플을 구함.
     
-![figure.4]({{ site.baseurl }}/images/{{ page.group }}/f04.png){:class="center-block" height="300px"}
+![figure.4]({{ site.baseurl }}/images/{{ page.group }}/f04.png){:class="center-block" height="250px"}
 
 - 최종적으로 다음과 같은 효과가 있다.
 
-![figure.5]({{ site.baseurl }}/images/{{ page.group }}/f05.png){:class="center-block" height="300px"}
+![figure.5]({{ site.baseurl }}/images/{{ page.group }}/f05.png){:class="center-block" height="250px"}
     
 ### N-Pair Loss
 
@@ -110,7 +110,7 @@ $${\widehat J}_{i,j} = \log \left( \sum_{(i,k) \in N}{\exp{\left(\alpha-D_{i,k}\
     - 1 Anchor, 1 Positive, (N-1) Negative Samples
     - N=2 인 경우 Triplet 과 동일한 모델이 된다.
 
-![figure.6]({{ site.baseurl }}/images/{{ page.group }}/f06.png){:class="center-block" height="220px"}
+![figure.6]({{ site.baseurl }}/images/{{ page.group }}/f06.png){:class="center-block" height="200px"}
 
 - Loss 함수는 다음과 같다.
 
@@ -127,10 +127,11 @@ $$\log\left( 1 + \sum_{i=1}^{N-1}{\exp(f^{T}f_i - f^Tf^+)}\right) = -\log{\frac{
 
 - 빠른 학습을 위해 효과적인 배치 구성이 필요하다.
 
-![figure.7]({{ site.baseurl }}/images/{{ page.group }}/f07.png){:class="center-block" height="400px"}
+![figure.7]({{ site.baseurl }}/images/{{ page.group }}/f07.png){:class="center-block" height="350px"}
 
-(추가 필요)
+- N-pair-mc loss
 
+$$L_{N-pair-mc}\left(\{(x_i, x_i^+)\}_{i=1}^N;f\right) = \frac{1}{N} \sum_{i=1}^N \log{\left(1+\sum_{j \neq i}{\exp{(f_i^{T}f_j^+ - f_i^T f_i^+)}} \right)}$$
 
 ## Facility Location
 
@@ -257,6 +258,8 @@ $$\nabla_{\Theta}\tilde{F}(X, {\bf y}_i^*;\Theta) = \sum_k \nabla_{\Theta}F\left
 
 ### Loss augmented inference
 
+- 식(6) 중 앞의 식을 푸는 방법을 기술한다. 여기서는 생략하도록 하자.
+
 ## Implementation details
 
 - 구현체가 이미 TensorFlow contrib 에 포함되어 있다. ([참고링크](https://www.tensorflow.org/versions/master/api_docs/python/tf/contrib/losses/metric_learning/cluster_loss){:target="_blank"})
@@ -281,4 +284,9 @@ $$\nabla_{\Theta}\tilde{F}(X, {\bf y}_i^*;\Theta) = \sum_k \nabla_{\Theta}F\left
     - 최종적으로 실험 데이터마다 적합한 비율을 선정하여 사용하였다.
         - CUB-200-2011, Cars196 : \\(\frac{C}{m}=0.25\\)
         - Stanford Online Products : \\(\frac{C}{m}=0.75\\)
-    
+
+### 실험 결과
+
+![figure.10]({{ site.baseurl }}/images/{{ page.group }}/f10.png){:class="center-block" height="200px"}
+
+![figure.11]({{ site.baseurl }}/images/{{ page.group }}/f11.png){:class="center-block" height="400px"}
