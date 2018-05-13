@@ -2,14 +2,14 @@
 layout: page
 group: "delf"
 title: "Large-Scale Image Retrieval with Attentive Deep Local Features"
-link_url: "https://arxiv.org/pdf/1612.06321.pdf"      
+link_url: "https://arxiv.org/pdf/1612.06321.pdf"
 ---
 
 - 재미있는 논문을 좀 정리해야 하는데 매번 시간이 없다.
 
 ## Preface
 
-- 논문 제목보다는 그냥 DELF 라고 부르는 CNN 모델이다.
+- 논문 제목보다는 그냥 DELF 라고 부르는 CNN 모델을 설명하는 논문으로 알려져있다.
 - 포항공대 + Goolgle 콜라보의 논문이다.
 - Google Vision API 에서 핵심적으로 사용되는 이미지 검색 기능이 아닐까한다. (추측이다.)
     - 논문 작성자가 구글 인턴쉽 때 만든 내용으로 보인다.
@@ -24,7 +24,6 @@ link_url: "https://arxiv.org/pdf/1612.06321.pdf"
     - 딱히 평가 기준으로 내세울 데이터가 없었던지라 부족해도 그냥 쓰던 상황.
         - 이런 이유로 [Revisiting Oxford and Paris: Large-Scale Image Retrieval Benchmarking](http://cmp.felk.cvut.cz/revisitop/) 같은 논문도 나왔다.
     - 여기서 구글이 표준이라 할만한 새로운 Landmark 데이터를 공개해버린 것.
-        - 자세한 내용은 이후에...
         
 ## Introduction
 
@@ -67,9 +66,117 @@ link_url: "https://arxiv.org/pdf/1612.06321.pdf"
 
 ## Google-Landmark Dataset
 
-- 원래 이런 데이터를 어떻게 생성하는지에 대한 논문도 낸 적이 있다. (2009년, 논문 참고)
+- 원래 이런 데이터를 어떻게 생성하는지에 대한 논문도 낸 적이 있다. (2009년, [논문](https://ieeexplore.ieee.org/document/5206749/) 참고)
 - 어쨌거나 Landmark 데이터를 공개한다. 앞으로 이걸로 평가를 좀 하자.
 - 12,894 개의 명소가 포함. 총 1,060,709 개의 이미지. 111,036개의 Query 이미지.
 - 전 세계를 대상으로 추출되었으며 GPS 정보와 연계되어 있다.
 
-![figure.2]({{ site.baseurl }}/images/{{ page.group }}/f02.png){:class="center-block" height="150px"}
+![figure.2]({{ site.baseurl }}/images/{{ page.group }}/f02.png){:class="center-block" }
+
+![figure.3]({{ site.baseurl }}/images/{{ page.group }}/f03.png){:class="center-block" }
+
+- Ground Truth 정보를 만들기 위해 다음 두 feature 정보를 활용한다.
+    - visual feature
+    - GPS coordinates
+- 두가지 정보를 이용하여 클러스터를 구축한다. (클러스터마다 중심점과 고유 ID를 부여)
+- 질의(query) 이미지와 클러스터 거리가 특정 threshold 이내로 들어오면 동일한 이미지라고 가정한다.
+- 사실 정확한 Ground Truth 정보를 만드는 것은 매우 힘든 일이다.
+    - GPS 정보가 잘못될 수도 있다.
+    - Landmark 가 너무 다양한 각도에서 촬영되어 서로다른 구조물로 보일수도 있다.
+    - Landmark가 아주 먼 거리에서 촬영되기도 한다.
+- 실측 거리가 25km 이내로 한정하여 구하면 적당한 결과를 얻을 수 있다는 것을 확인했다.
+- 데이터에 에러가 좀 있더라도 결과는 괜찮게 나온다.
+
+## DELF
+
+- 대규모의 이미지 검색 시스템은 다음 4단계 작업으로 나누어볼 수 있다.
+    - (i) dense localized feature 추출
+    - (ii) keypoint 선택
+    - (iii) dimensinality reduction
+    - (iv) 인덱싱 및 검색 시스템 구축
+
+- 먼저 전체 구조를 보자.
+
+![figure.1]({{ site.baseurl }}/images/{{ page.group }}/f01.png){:class="center-block" }
+
+- ResNet50 모델이 기본 백본이다.
+    - imagenet 으로 pretrain 된 net. 이다.
+    - 이 중 conv4_x 레이어를 사용하게 된다. ([링크](https://www.kaggle.com/keras/resnet50))
+    - 즉, FCN 정보를 활용한다.
+- 명시적으로 image pyramid 를 사용하여 여러개의 feature 를 추출한다. (각각의 FCN)
+    - 이건 데이터 구축시 사용하는 것으로 보임.
+    - 학습 단계에서는 고정된 입력 크기를 가지는 듯.
+- landmark 데이터로 fine-tunning 과정을 거친다.
+- 입력 이미지는 모두 center crop뒤 250x250 으로 rescale 된다.
+    - 여기서 224x224 크기로 랜덤 crop.
+- 전체 과정중에 object 나 patch 레벨에서의 정보를 사용하지 않는다.
+
+## Attention-based Keypoint Selection.
+
+![figure.4]({{ site.baseurl }}/images/{{ page.group }}/f04.png){:class="center-block" }
+
+- 추출된 feature 를 모두 사용하는 것이 아니라 attention 을 이용해서 keypoint 만 추출한다.
+- keypoint 를 추출하는 것은 품질 뿐만 아니라 시스템 효율화에도 매우 중요한 요소이다.
+
+### Learning with Weak Supervision
+
+- weighted sum 을 이용한 방식. (pooled by a weighted sum)
+- 그림 4(b) 를 참고하자.
+
+$${\bf y} = {\bf W}\left( \sum_n \alpha(f_n;\theta)\cdot f_n  \right)\qquad{(1)}$$
+
+- \\(\alpha(f\_n;\theta)\\) 는 score 함수이고 이 때 파라미터는 \\(\theta\\) 가 된다.
+- \\({\bf W}\\) 는 \\( \{\bf W} \in R^{M \times d} \\) 이고 \\(M\\) 은 클래스 갯수이다.
+- 로스 함수는 cross entropy loss 를 쓴다.
+
+$$L = -{\bf y}^* \cdot \log \left( \frac{\exp(y)}{ {\bf 1^T} \exp( {\bf y} )} \right)\qquad{(2)}$$
+
+- 여기서 \\({\bf y}^*\\) 는 ground-truth 이고 \\({\bf 1}\\) 는 one vector.
+- score 함수 \\(\alpha(\cdot)\\) backpropagation시 학습이 된다.
+
+$$\frac{\partial L}{\partial \theta} = \frac{\partial L}{\partial {\bf y}} \sum_n \frac{\partial {\bf y}}{\partial \alpha_n} \frac{\partial \alpha_n}{\partial \theta} = \frac{\partial L}{\partial {\bf y}}\sum_n {\bf W} f_n\frac{\partial \alpha_n}{\partial \theta} \qquad{(3)}$$
+
+- 여기서 \\(\alpha(\cdot)\\) 는 음수가 되지 않도록 강제한다.
+- 실제 score 함수 구현은 2개의 conv 레이어와 softplus 비선형 함수로 구현되어 있다.
+- 이 때 1x1 conv 를 사용하게 된다.
+
+```python
+def _attention(self, attention_feature_map, feature_map, attention_nonlinear, kernel=1):
+    with tf.variable_scope('attention', values = [attention_feature_map, feature_map]):
+        with tf.variable_scope('compute', values = [feature_map]):
+            conv1 = slim.conv2d(feature_map, 512, kernel,
+                                rate=1, activation_fn=tf.nn.relu, scope='conv1')    
+            score = slim.conv2d(conv1, 1, kernel,
+                                rate=1, activation_fn=None,
+                                normalizer_fn=None, scope='conv2')
+        with tf.variable_scope('merge', values=[attention_feature_map, score]):
+            prob = tf.nn.softplus(score)
+            feat = tf.reduce_mean(tf.multiply(attention_feature_map, prob), [1,2])
+        feat = tf.expend_dims(tf.expaned_dims(feet, 1), 2)
+    return feat, prob, score
+````
+
+### Tranining Attention
+
+- 제안된 모델은 feature 와 attention 모듈이 모두 함께 학습되는 구조.
+    - 학습이 잘 안될 수 있다.
+- 그래서 2-step 방식의 학습을 제안.
+    - 먼저 descriptor 부터 학습을 한다.
+    - 이후에 descriptor 를 고정하고 score-function 을 학습한다.
+- 성능을 올리기 위해 attention 을 학습할 때 다양한 scale 로 학습한다.
+
+### Characteristics
+
+- keypoint 를 선택할 때 다른 방법으로 추출된 descriptor 를 사용해도 된다.
+    - 예를 들어 SIFT 나 LIFT 로 descriptor 를 추출할 수 있다.
+    - 구글 내부에서는 congas 를 사용한다고 들었다.
+
+## Dimentionality Reduction
+
+- 검색 성능을 올리기 위해 최종 차원(dim)을 줄인다. 
+- 먼저 L2 norm 을 적용 후 PCA를 돌린다. (40dim 까지 줄인다.)
+- 그리고 다시 L2 norm.
+
+
+## Experiments
+
