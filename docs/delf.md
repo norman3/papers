@@ -164,19 +164,62 @@ def _attention(self, attention_feature_map, feature_map, attention_nonlinear, ke
     - 먼저 descriptor 부터 학습을 한다.
     - 이후에 descriptor 를 고정하고 score-function 을 학습한다.
 - 성능을 올리기 위해 attention 을 학습할 때 다양한 scale 로 학습한다.
+    - 일단 center-crop 을 수행한뒤 (squre) 900x900 으로 rescale.
+    - 랜덤하게 720x720 을 크롭한 뒤 r <= 1 범위의 축적으로 최종 rescale.
 
 ### Characteristics
 
-- keypoint 를 선택할 때 다른 방법으로 추출된 descriptor 를 사용해도 된다.
-    - 예를 들어 SIFT 나 LIFT 로 descriptor 를 추출할 수 있다.
-    - 구글 내부에서는 congas 를 사용한다고 들었다.
+- 전통적인 KeyPoint 추출로 SIFT나 LIFT 등을 들 수 있다.
+- 여기서 사용되는 방법은 이것들과는 다른 방법이다. (descriptor 생성 후 선택)
+- 기존의 방법은 낮은 수준의 특징들을 추출하는 기법이다.
+    - 반면 우리가 필요한 것은 객체 단위 keypoint.
+- 제안된 방법은 이미지 분류 작업을 통해 feature map으로부터 좀 더 높은 수준의 정보들을 가려내게 된다.
 
-## Dimentionality Reduction
+### Dimentionality Reduction
 
 - 검색 성능을 올리기 위해 최종 차원(dim)을 줄인다. 
 - 먼저 L2 norm 을 적용 후 PCA를 돌린다. (40dim 까지 줄인다.)
 - 그리고 다시 L2 norm.
 
+### IR System
+
+- 기본적인 검색 방식은 ANN
+- 보통 PQ (Product Quantization) 가 많이 사용되는데 여기서는 KD-Tree 를 혼용해서 사용한다.
+- 추출되는 feature 의 크기는 40D 이고 이를 최종 50bit 화 시킨다.
+- 기존의 PQ 를 개선하였다.
+    - residual 에 대한 PQ 색인 부분을 KD-Tree 로 대체.
+    - PQ 에 대한 설명을 자세히 할 수 없기 때문에 그냥 넘어가자.
+- 의문점.
+    - 겨우 100만개의 이미지를 위해 PQ를 쓸필요가 있나?
+    - Random Projection Tree 같은게 더 편할 것 같은데...
+
 
 ## Experiments
+
+- 평가 방법
+    - IR의 전동 measure 방식인 mAP (mean average precision)
+    - 모든 쿼리마다 얻어진 결과를 relevance 순으로 정렬한뒤 측정된 ap의 평균값을 의미
+    - 이 논문에서는 평가 방법을 약간 바꿈.
+
+$$Pre = \frac{\sum_q | R_q^{TP} |}{ \sum_q | R_q|} , Rec = \sum_q | R_q^{TP}|\qquad{(4)}$$
+
+- \\(R\_q\\) 는 쿼리 \\(q\\) 로 얻어진 검색 결과를 의미한다.
+- \\(R\_q^{TP}(\in R\_q)\\) 는 true-positive 결과를 의미한다.
+- 이러한 방식은 micro-AP 라 부르는 평가방식과 유사하다.
+
+
+![figure.5]({{ site.baseurl }}/images/{{ page.group }}/f05.png){:class="center-block" height="400"}
+
+- FT 는 fine-tuning 이라는 의미.
+- ATT 는 attention 이라는 의미.
+
+![figure.6]({{ site.baseurl }}/images/{{ page.group }}/f06.png){:class="center-block" }
+
+- 왼쪽은 Query, 중간은 DELF, 오른쪽은 DIR.
+
+- 반대의 케이스도 좀 보자.
+
+![figure.7]({{ site.baseurl }}/images/{{ page.group }}/f07.png){:class="center-block" }
+
+
 
