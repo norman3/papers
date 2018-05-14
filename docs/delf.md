@@ -11,10 +11,10 @@ link_url: "https://arxiv.org/pdf/1612.06321.pdf"
 
 - 논문 제목보다는 그냥 DELF 라고 부르는 CNN 모델을 설명하는 논문으로 알려져있다.
 - 포항공대 + Goolgle 콜라보의 논문이다.
-- Google Vision API 에서 핵심적으로 사용되는 이미지 검색 기능이 아닐까한다. (추측이다.)
+- Google Vision API 에서 핵심적으로 사용되는 이미지 검색 기능이 아닐까한다. (추측이긴 한데 얼마전 세미나를 들었음...)
     - 논문 작성자가 구글 인턴쉽 때 만든 내용으로 보인다.
 - 2017년 논문이라 요즘 기준으로는 오래된 논문이다.
-    - 그런데 최근 [Google Landmark](https://www.kaggle.com/c/landmark-recognition-challenge/data) 데이터가 공개되면서 새로 갱신되었다.
+    - 그런데 최근 [Google Landmark](https://www.kaggle.com/c/landmark-recognition-challenge) 데이터가 공개되면서 새로 갱신되었다.
     - 사실은 구글 Landmark 를 위해 만들어진 모델이었으나 최초 발표시에는 이걸 자랑할 수 없었다.
     - 구글답게 데이터를 공개해버리고 논문을 새로 갱신하였다.
 - 구글 Landmark Dataset 공개는 의미가 크다.
@@ -207,11 +207,18 @@ $$Pre = \frac{\sum_q | R_q^{TP} |}{ \sum_q | R_q|} , Rec = \sum_q | R_q^{TP}|\qq
 - \\(R\_q^{TP}(\in R\_q)\\) 는 true-positive 결과를 의미한다.
 - 이러한 방식은 micro-AP 라 부르는 평가방식과 유사하다.
 
+![figure.10]({{ site.baseurl }}/images/{{ page.group }}/f10.png){:class="center-block" height="400"}
 
 ![figure.5]({{ site.baseurl }}/images/{{ page.group }}/f05.png){:class="center-block" height="400"}
 
 - FT 는 fine-tuning 이라는 의미.
 - ATT 는 attention 이라는 의미.
+
+### Qualitative Results
+
+- **DELF vs. DIR**
+
+- 그림 6이 DELF와 DIR 차이를 보여준다.
 
 ![figure.6]({{ site.baseurl }}/images/{{ page.group }}/f06.png){:class="center-block" }
 
@@ -220,6 +227,20 @@ $$Pre = \frac{\sum_q | R_q^{TP} |}{ \sum_q | R_q|} , Rec = \sum_q | R_q^{TP}|\qq
 - 반대의 케이스도 좀 보자.
 
 ![figure.7]({{ site.baseurl }}/images/{{ page.group }}/f07.png){:class="center-block" }
+
+
+- **DELF vs. CONGAS**
+
+- 그냥 뭐 DELF 가 더 좋다.
+
+![figure.8]({{ site.baseurl }}/images/{{ page.group }}/f08.png){:class="center-block" }
+
+- DELF 나온 결과를 RANSAC 을 돌려 확인해봄.
+
+- **Attetion 결과들**
+
+![figure.9]({{ site.baseurl }}/images/{{ page.group }}/f09.png){:class="center-block" }
+
 
 
 
