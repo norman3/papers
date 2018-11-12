@@ -13,12 +13,12 @@ link_url: https://arxiv.org/abs/1605.07146
 ## Introduction
 
 - CNN 의 Conv. 레이어 수는 지속적으로 증가하기 시작했다.
-    - Alex, VGG, Inception, Resnet 의 단계를 거쳤다.
+    - Alex, VGG, Inception, ResNet 의 단계를 거쳤다.
     - 동시에 이미지 인식 task의 성능 향상도 이루어졌다.
 - 하지만 망이 깊어지면서 학습도 점점 어려워졌다.
     - 이를 해결하기 위해 다양한 기법들이 제시되었다.
         - 초기화 젼략, 다양한 Optimizer, skip-connection, knowledge transfer, layer-wise 학습
-- 최근에는 activatton 을 residual block 의 어느 위치에 두느냐에 따라 학습에 효과가 달라지는 것도 확인하였다.
+- 최근에는 activation 을 residual block 의 어느 위치에 두느냐에 따라 학습에 효과가 달라지는 것도 확인하였다.
 - ResNet 이전에 나온 아키텍처인 Highway Network 가 있다.
     - ResNet과 Highway Net. 의 차이는 residual link 마지막에 gate 를 두고 이를 학습을 하는가 하는 것이다.
 - 위의 경우로 보자면 ResNet 과 관련된 연구는 2가지 정도로 진행되었다고 볼 수 있다.
@@ -38,23 +38,23 @@ link_url: https://arxiv.org/abs/1605.07146
     - 저자들은 이 문제를 해결하기 위해 residual block 을 무작위로 비 활성화하는 방법을 취했다.
         - 이 방법은 dropout 의 특별한 예로 볼 수 있으며 dropout 이 적용되는 영역의 redidual block에 identity scala weight 가 적용된다.
 - 이 논문에서는 망의 깊이를 증가시키는 것보다 residual block 을 개선하여 성능을 향상시킬 수 있는지 살펴보았다.
-    - 더 넓은 residual block 을 사용함으로서 성능이 향상되는 것을 확인하였다.
+    - 즉, 더 넓은 residual block 을 사용함으로서 성능이 향상되는 것을 확인하였다.
 
 ### Dropout 적용하기.
 
-- dropout 은 한때 인기있는 기법이었으나 batch norm. 등장 이후 사용 빈도가 많이 줄었다.
-- dropout 을 사용하면 regularization 효과가 생겨 성능이 증가한다는 사실을 이미 잘 알려진 사실이다.
+- Dropout 은 한때 인기있는 기법이었으나 batch norm. 등장 이후 사용 빈도가 많이 줄었다.
+- Dropout 을 사용하면 regularization 효과가 생겨 성능이 증가한다는 사실을 이미 잘 알려진 사실이다.
 - WRN의 경우 더 넓은 redidual block 을 사용하게 되므로 parameter 의 수가 증가하게 된다.
-    - dropout 이 overfitting 을 막아주게 되므로 여기에 이를 적용해본다.
-    - 이전 연구에 따르면 dropout 을 identity 영역에 적용하면 성능이 더 하락한다는 결과아 있다.
+    - Dropout 이 overfitting 을 막아주게 되므로 여기에 이를 적용해본다.
+    - 이전 연구에 따르면 dropout 을 identity 영역에 적용하면 성능이 더 하락한다는 결과가 있다.
     - 우리는 대신 이를 convolution layer 에 적용한다.
     - 실험결과 더 좋은 성능을 확인하였다. (SVHN 데이터를 활용하여 1.64% 에러율을 달성.)
 
 ### 요약 (contiribution)
 
-- residual 구조에 대해 자세한 실험을 수행하여 이를 확인함.
+- Residual 구조에 대해 자세한 실험을 수행하여 이를 확인함.
 - 새로운 widened resnet 을 제안함. (성능 향상을 확인함.)
-- residual 에 dropout 을 적용하는 새로운 방법을 제시함.
+- Residual 에 dropout 을 적용하는 새로운 방법을 제시함.
 - 제안된 network 가 SOTA 임을 보임.
 
 ## Wide residual networks
