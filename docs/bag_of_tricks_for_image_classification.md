@@ -71,7 +71,7 @@ link_url: http://arxiv.org/abs/1812.01187
     - ResNet-50
     - Inception-V3 (단, 입력이 299x299 이다.)
     - Mobilenet
-- 사용된 데이터는 ImageNet (ISLVRC2021-1000class) 데이터이다.
+- 사용된 데이터는 ImageNet (ISLVRC2012-1000class) 데이터이다.
 
 ![Table.2]({{ site.baseurl }}/images/{{ page.group }}/t02.png){:class="center-block" height="250" }
 
