@@ -17,7 +17,7 @@ link_url: https://arxiv.org/abs/1605.07146
     - 동시에 이미지 인식 task의 성능 향상도 이루어졌다.
 - 하지만 망이 깊어지면서 학습도 점점 어려워졌다.
     - 이를 해결하기 위해 다양한 기법들이 제시되었다.
-        - 초기화 젼략, 다양한 Optimizer, skip-connection, knowledge transfer, layer-wise 학습
+        - 초기화 전략, 다양한 Optimizer, skip-connection, knowledge transfer, layer-wise 학습
 - 최근에는 activation 을 residual block 의 어느 위치에 두느냐에 따라 학습에 효과가 달라지는 것도 확인하였다.
 - ResNet 이전에 나온 아키텍처인 Highway Network 가 있다.
     - ResNet과 Highway Net. 의 차이는 residual link 마지막에 gate 를 두고 이를 학습을 하는가 하는 것이다.
