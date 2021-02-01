@@ -2,7 +2,7 @@
 layout: page
 group: "technical_debt"
 title: "Hidden Technical Debt in ML Systems"
-link_url: https://papers.nips.cc/paper/656-hidden-technical-debt-in-machine-learning-systems
+link_url: https://papers.nips.cc/paper/2015/hash/86df7dcfd896fcaf2674f757a2463eba-Abstract.html
 ---
 
 **참고자료**
